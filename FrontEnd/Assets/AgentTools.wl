@@ -54,7 +54,7 @@
 		"French"             -> "Outils pour le d\[EAcute]veloppement de Wolfram Language",
 		"Japanese"           -> "Wolfram\:8a00\:8a9e\:958b\:767a\:7528\:30c4\:30fc\:30eb",
 		"Korean"             -> "Wolfram \:c5b8\:c5b4 \:ac1c\:bc1c\:c6a9 \:b3c4\:ad6c",
-		"Spanish"            -> "Herramientas para computaci\[OAcute]n y conocimiento generales"
+		"Spanish"            -> "Herramientas para desarrollo en Wolfram Language"
 	|>],
 	
 	"prefsHarnessesConfigured" -> LanguageSwitched["Configured:", <|
