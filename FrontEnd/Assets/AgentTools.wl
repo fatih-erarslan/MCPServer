@@ -1,13 +1,13 @@
 <|
 "AgentToolsStrings" -> {
 
-	"prefsSubtitle" -> LanguageSwitched["LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:", <|
-		"ChineseSimplified"  -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"ChineseTraditional" -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"French"             -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Japanese"           -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Korean"             -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Spanish"            -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:"
+	"prefsSubtitle" -> LanguageSwitched["AI environments can be configured to access `1` or `2`", <|
+		"ChineseSimplified"  -> "AI environments can be configured to access `1` or `2`",
+		"ChineseTraditional" -> "AI environments can be configured to access `1` or `2`",
+		"French"             -> "AI environments can be configured to access `1` or `2`",
+		"Japanese"           -> "AI environments can be configured to access `1` or `2`",
+		"Korean"             -> "AI environments can be configured to access `1` or `2`",
+		"Spanish"            -> "AI environments can be configured to access `1` or `2`"
 	|>],
 	
 	"prefsDocsLinkText" -> LanguageSwitched["Documentation", <|
@@ -55,40 +55,58 @@
 		"Spanish"            -> "Tools for Wolfram Language development"
 	|>],
 	
-	"prefsHarnessesConfigured" -> LanguageSwitched["Configured:", <|
-		"ChineseSimplified"  -> "Configured:",
-		"ChineseTraditional" -> "Configured:",
-		"French"             -> "Configured:",
-		"Japanese"           -> "Configured:",
-		"Korean"             -> "Configured:",
-		"Spanish"            -> "Configured:"
+	"prefsHarnessesConfigured" -> LanguageSwitched["Configured on your system:", <|
+		"ChineseSimplified"  -> "Configured on your system:",
+		"ChineseTraditional" -> "Configured on your system:",
+		"French"             -> "Configured on your system:",
+		"Japanese"           -> "Configured on your system:",
+		"Korean"             -> "Configured on your system:",
+		"Spanish"            -> "Configured on your system:"
 	|>],
 	
-	"prefsHarnessesMore" -> LanguageSwitched["More:", <|
-		"ChineseSimplified"  -> "More:",
-		"ChineseTraditional" -> "More:",
-		"French"             -> "More:",
-		"Japanese"           -> "More:",
-		"Korean"             -> "More:",
-		"Spanish"            -> "More:"
+	"prefsHarnessesDetected" -> LanguageSwitched["Detected on your system:", <|
+		"ChineseSimplified"  -> "Detected on your system:",
+		"ChineseTraditional" -> "Detected on your system:",
+		"French"             -> "Detected on your system:",
+		"Japanese"           -> "Detected on your system:",
+		"Korean"             -> "Detected on your system:",
+		"Spanish"            -> "Detected on your system:"
+	|>],
+	
+	"prefsHarnessesMore" -> LanguageSwitched["Other supported AI environments:", <|
+		"ChineseSimplified"  -> "Other supported AI environments:",
+		"ChineseTraditional" -> "Other supported AI environments:",
+		"French"             -> "Other supported AI environments:",
+		"Japanese"           -> "Other supported AI environments:",
+		"Korean"             -> "Other supported AI environments:",
+		"Spanish"            -> "Other supported AI environments:"
 	|>],
 
-	"prefsPickTool" -> LanguageSwitched["Pick a toolset", <|
-		"ChineseSimplified"  -> "Pick a toolset",
-		"ChineseTraditional" -> "Pick a toolset",
-		"French"             -> "Pick a toolset",
-		"Japanese"           -> "Pick a toolset",
-		"Korean"             -> "Pick a toolset",
-		"Spanish"            -> "Pick a toolset"
+	"prefsHarnessesAll" -> LanguageSwitched["Supported AI environments:", <|
+		"ChineseSimplified"  -> "Supported AI environments:",
+		"ChineseTraditional" -> "Supported AI environments:",
+		"French"             -> "Supported AI environments:",
+		"Japanese"           -> "Supported AI environments:",
+		"Korean"             -> "Supported AI environments:",
+		"Spanish"            -> "Supported AI environments:"
 	|>],
 	
-	"prefsNoTool" -> LanguageSwitched["No toolset", <|
-		"ChineseSimplified"  -> "No toolset",
-		"ChineseTraditional" -> "No toolset",
-		"French"             -> "No toolset",
-		"Japanese"           -> "No toolset",
-		"Korean"             -> "No toolset",
-		"Spanish"            -> "No toolset"
+	"prefsConfigureButton" -> LanguageSwitched["Configure", <|
+		"ChineseSimplified"  -> "Configure",
+		"ChineseTraditional" -> "Configure",
+		"French"             -> "Configure",
+		"Japanese"           -> "Configure",
+		"Korean"             -> "Configure",
+		"Spanish"            -> "Configure"
+	|>],
+	
+	"prefsDisableButton" -> LanguageSwitched["Disable", <|
+		"ChineseSimplified"  -> "Disable",
+		"ChineseTraditional" -> "Disable",
+		"French"             -> "Disable",
+		"Japanese"           -> "Disable",
+		"Korean"             -> "Disable",
+		"Spanish"            -> "Disable"
 	|>],
 
 	"prefsInstallLocation" -> LanguageSwitched["Install location:", <|
