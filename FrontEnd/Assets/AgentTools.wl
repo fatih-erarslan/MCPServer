@@ -91,6 +91,15 @@
 		"Spanish"            -> "Supported AI environments:"
 	|>],
 	
+	"prefsConfigureAllButton" -> LanguageSwitched["Configure All", <|
+		"ChineseSimplified"  -> "Configure All",
+		"ChineseTraditional" -> "Configure All",
+		"French"             -> "Configure All",
+		"Japanese"           -> "Configure All",
+		"Korean"             -> "Configure All",
+		"Spanish"            -> "Configure All"
+	|>],
+	
 	"prefsConfigureButton" -> LanguageSwitched["Configure", <|
 		"ChineseSimplified"  -> "Configure",
 		"ChineseTraditional" -> "Configure",

@@ -100,10 +100,12 @@ clientInterfaces[] :=
 									Join[
 										{
 											Style[tr["prefsHarnessesDetected"], Smaller, FontColor -> ldsGray[0.5], Bold],
-											Button["Configure All",
+											Button[tr["prefsConfigureAllButton"],
 												refresh @ Map[DeployAgentTools, detectedClients],
 												ImageSize -> Automatic,
-												FrameMargins -> {{30,30},{10,10}}
+												FrameMargins -> {{30,30},{10,10}},
+												BaseStyle -> {},
+												DefaultBaseStyle -> {}
 											]
 										},
 										clientRow["Detected", #, clientNameSpacer, Dynamic[refresh]]& /@ detectedClients
@@ -305,7 +307,10 @@ clientControls[category_, client_, Dynamic[refresh_]] :=
 								DeployedAgentTools @ client,
 								#["Scope"] === "Global" && MatchQ[#["Toolset"], "Wolfram"|"WolframLanguage"]&
 							],
-							Method -> "Queued"
+							Method -> "Queued",
+							BaseStyle -> {},
+							DefaultBaseStyle -> {},
+							BaselinePosition -> Baseline
 						],
 						Button[ (* configure *)
 							PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 1, Alignment -> Center],
@@ -314,7 +319,10 @@ clientControls[category_, client_, Dynamic[refresh_]] :=
 								CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
 								OverwriteTarget -> True
 							],
-							Method -> "Queued"
+							Method -> "Queued",
+							BaseStyle -> {},
+							DefaultBaseStyle -> {},
+							BaselinePosition -> Baseline
 						]
 					]
 					,
