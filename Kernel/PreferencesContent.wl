@@ -101,7 +101,13 @@ clientInterfaces[] :=
 										{
 											Style[tr["prefsHarnessesDetected"], Smaller, FontColor -> ldsGray[0.5], Bold],
 											Button[tr["prefsConfigureAllButton"],
-												refresh @ Map[DeployAgentTools, detectedClients],
+												refresh @ Do[
+													DeployAgentTools[
+														client,
+														CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}]
+													],
+													{client, detectedClients}
+												],
 												ImageSize -> Automatic,
 												FrameMargins -> {{30,30},{10,10}},
 												BaseStyle -> {},
