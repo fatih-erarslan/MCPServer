@@ -138,7 +138,7 @@ clientInterfaces[] :=
 										ItemSize -> Scaled[1],
 										Spacings -> {Automatic, {2 -> 1, 3 -> 1}}
 									],
-									FrameStyle -> ldsGray[0.8],
+									FrameStyle -> LightDarkSwitched[GrayLevel[0.8980], GrayLevel[0.2862]],
 									FrameMargins -> 15,
 									RoundingRadius -> 6
 								]
@@ -162,7 +162,7 @@ clientInterfaces[] :=
 										ItemSize -> Scaled[1],
 										Spacings -> {Automatic, {2 -> 1.5}}
 									],
-									FrameStyle -> ldsGray[0.8],
+									FrameStyle -> LightDarkSwitched[GrayLevel[0.8980], GrayLevel[0.2862]],
 									FrameMargins -> 15,
 									RoundingRadius -> 6
 								]
