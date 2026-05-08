@@ -239,7 +239,8 @@ configureAllButton[detectedClients_, Dynamic[refresh_]] :=
 			refresh @ Do[
 				DeployAgentTools[
 					client,
-					CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}]
+					CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+					OverwriteTarget -> True
 				],
 				{client, detectedClients}
 			],
