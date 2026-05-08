@@ -86,9 +86,9 @@ clientInterfaces[] :=
 					ProgressIndicator[Appearance -> "Necklace"],
 
 				MatchQ[clients, Except[{__String}]],
-					Style["[[The list of supported MCP clients is not available.]]", Italic, FontColor -> ldsGray[0.5]],
+					Style[tr["prefsNoMCPClients"], Italic, FontColor -> ldsGray[0.5]],
 				MatchQ[servers, Except[{__String}]],
-					Style["[[The list of default MCP servers is not available.]]", Italic, FontColor -> ldsGray[0.5]],
+					Style[tr["prefsNoMCPServers"], Italic, FontColor -> ldsGray[0.5]],
 				
 				True,
 					Column[

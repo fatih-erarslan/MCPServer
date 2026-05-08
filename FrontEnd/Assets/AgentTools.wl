@@ -143,8 +143,26 @@
 		"Japanese"           -> "Uninstall this toolset",
 		"Korean"             -> "Uninstall this toolset",
 		"Spanish"            -> "Uninstall this toolset"
-	|>]
+	|>],
 	
+	"prefsNoMCPClients" -> LanguageSwitched["The list of supported MCP clients is not available.", <|
+		"ChineseSimplified"  -> "The list of supported MCP clients is not available.",
+		"ChineseTraditional" -> "The list of supported MCP clients is not available.",
+		"French"             -> "The list of supported MCP clients is not available.",
+		"Japanese"           -> "The list of supported MCP clients is not available.",
+		"Korean"             -> "The list of supported MCP clients is not available.",
+		"Spanish"            -> "The list of supported MCP clients is not available."
+	|>],
+	
+	"prefsNoMCPServers" -> LanguageSwitched["The list of default MCP servers is not available.", <|
+		"ChineseSimplified"  -> "The list of default MCP servers is not available.",
+		"ChineseTraditional" -> "The list of default MCP servers is not available.",
+		"French"             -> "The list of default MCP servers is not available.",
+		"Japanese"           -> "The list of default MCP servers is not available.",
+		"Korean"             -> "The list of default MCP servers is not available.",
+		"Spanish"            -> "The list of default MCP servers is not available."
+	|>]
+
 },
 
 
