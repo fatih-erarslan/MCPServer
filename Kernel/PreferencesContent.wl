@@ -128,7 +128,7 @@ clientInterfaces[] :=
 											{
 												Style[tr["prefsHarnessesDetected"],
 														FontSize -> Inherited,
-														FontColor -> ldsGray[0.4],
+														FontColor -> LightDarkSwitched[RGBColor["#d45d1c"], RGBColor["#ed8549"]],
 														FontWeight -> "DemiBold"
 													],
 												configureAllButton[detectedClients, Dynamic[refresh]]
@@ -138,7 +138,7 @@ clientInterfaces[] :=
 										ItemSize -> Scaled[1],
 										Spacings -> {Automatic, {2 -> 1, 3 -> 1}}
 									],
-									FrameStyle -> LightDarkSwitched[GrayLevel[0.8980], GrayLevel[0.2862]],
+									FrameStyle -> LightDarkSwitched[RGBColor["#f6cfb6"], RGBColor["#77401a"]],
 									FrameMargins -> 15,
 									RoundingRadius -> 6
 								]
