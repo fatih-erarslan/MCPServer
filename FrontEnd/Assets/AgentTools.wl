@@ -1,13 +1,13 @@
 <|
 "AgentToolsStrings" -> {
 
-	"prefsSubtitle" -> LanguageSwitched["LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:", <|
-		"ChineseSimplified"  -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"ChineseTraditional" -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"French"             -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Japanese"           -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Korean"             -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:",
-		"Spanish"            -> "LLMs and their calling harnesses can be configured to access your Wolfram System through either of the following toolsets:"
+	"prefsSubtitle" -> LanguageSwitched["AI environments can be configured to access `1` or `2`", <|
+		"ChineseSimplified"  -> "AI environments can be configured to access `1` or `2`",
+		"ChineseTraditional" -> "AI environments can be configured to access `1` or `2`",
+		"French"             -> "AI environments can be configured to access `1` or `2`",
+		"Japanese"           -> "AI environments can be configured to access `1` or `2`",
+		"Korean"             -> "AI environments can be configured to access `1` or `2`",
+		"Spanish"            -> "AI environments can be configured to access `1` or `2`"
 	|>],
 	
 	"prefsDocsLinkText" -> LanguageSwitched["Documentation", <|
@@ -55,40 +55,67 @@
 		"Spanish"            -> "Tools for Wolfram Language development"
 	|>],
 	
-	"prefsHarnessesConfigured" -> LanguageSwitched["Configured:", <|
-		"ChineseSimplified"  -> "Configured:",
-		"ChineseTraditional" -> "Configured:",
-		"French"             -> "Configured:",
-		"Japanese"           -> "Configured:",
-		"Korean"             -> "Configured:",
-		"Spanish"            -> "Configured:"
+	"prefsHarnessesConfigured" -> LanguageSwitched["Configured on your system:", <|
+		"ChineseSimplified"  -> "Configured on your system:",
+		"ChineseTraditional" -> "Configured on your system:",
+		"French"             -> "Configured on your system:",
+		"Japanese"           -> "Configured on your system:",
+		"Korean"             -> "Configured on your system:",
+		"Spanish"            -> "Configured on your system:"
 	|>],
 	
-	"prefsHarnessesMore" -> LanguageSwitched["More:", <|
-		"ChineseSimplified"  -> "More:",
-		"ChineseTraditional" -> "More:",
-		"French"             -> "More:",
-		"Japanese"           -> "More:",
-		"Korean"             -> "More:",
-		"Spanish"            -> "More:"
+	"prefsHarnessesDetected" -> LanguageSwitched["Detected on your system:", <|
+		"ChineseSimplified"  -> "Detected on your system:",
+		"ChineseTraditional" -> "Detected on your system:",
+		"French"             -> "Detected on your system:",
+		"Japanese"           -> "Detected on your system:",
+		"Korean"             -> "Detected on your system:",
+		"Spanish"            -> "Detected on your system:"
+	|>],
+	
+	"prefsHarnessesMore" -> LanguageSwitched["Other supported AI environments:", <|
+		"ChineseSimplified"  -> "Other supported AI environments:",
+		"ChineseTraditional" -> "Other supported AI environments:",
+		"French"             -> "Other supported AI environments:",
+		"Japanese"           -> "Other supported AI environments:",
+		"Korean"             -> "Other supported AI environments:",
+		"Spanish"            -> "Other supported AI environments:"
 	|>],
 
-	"prefsPickTool" -> LanguageSwitched["Pick a toolset", <|
-		"ChineseSimplified"  -> "Pick a toolset",
-		"ChineseTraditional" -> "Pick a toolset",
-		"French"             -> "Pick a toolset",
-		"Japanese"           -> "Pick a toolset",
-		"Korean"             -> "Pick a toolset",
-		"Spanish"            -> "Pick a toolset"
+	"prefsHarnessesAll" -> LanguageSwitched["Supported AI environments:", <|
+		"ChineseSimplified"  -> "Supported AI environments:",
+		"ChineseTraditional" -> "Supported AI environments:",
+		"French"             -> "Supported AI environments:",
+		"Japanese"           -> "Supported AI environments:",
+		"Korean"             -> "Supported AI environments:",
+		"Spanish"            -> "Supported AI environments:"
 	|>],
 	
-	"prefsNoTool" -> LanguageSwitched["No toolset", <|
-		"ChineseSimplified"  -> "No toolset",
-		"ChineseTraditional" -> "No toolset",
-		"French"             -> "No toolset",
-		"Japanese"           -> "No toolset",
-		"Korean"             -> "No toolset",
-		"Spanish"            -> "No toolset"
+	"prefsConfigureAllButton" -> LanguageSwitched["Configure All", <|
+		"ChineseSimplified"  -> "Configure All",
+		"ChineseTraditional" -> "Configure All",
+		"French"             -> "Configure All",
+		"Japanese"           -> "Configure All",
+		"Korean"             -> "Configure All",
+		"Spanish"            -> "Configure All"
+	|>],
+	
+	"prefsConfigureButton" -> LanguageSwitched["Configure", <|
+		"ChineseSimplified"  -> "Configure",
+		"ChineseTraditional" -> "Configure",
+		"French"             -> "Configure",
+		"Japanese"           -> "Configure",
+		"Korean"             -> "Configure",
+		"Spanish"            -> "Configure"
+	|>],
+	
+	"prefsDisableButton" -> LanguageSwitched["Disable", <|
+		"ChineseSimplified"  -> "Disable",
+		"ChineseTraditional" -> "Disable",
+		"French"             -> "Disable",
+		"Japanese"           -> "Disable",
+		"Korean"             -> "Disable",
+		"Spanish"            -> "Disable"
 	|>],
 
 	"prefsInstallLocation" -> LanguageSwitched["Install location:", <|
@@ -116,8 +143,26 @@
 		"Japanese"           -> "Uninstall this toolset",
 		"Korean"             -> "Uninstall this toolset",
 		"Spanish"            -> "Uninstall this toolset"
-	|>]
+	|>],
 	
+	"prefsNoMCPClients" -> LanguageSwitched["The list of supported MCP clients is not available.", <|
+		"ChineseSimplified"  -> "The list of supported MCP clients is not available.",
+		"ChineseTraditional" -> "The list of supported MCP clients is not available.",
+		"French"             -> "The list of supported MCP clients is not available.",
+		"Japanese"           -> "The list of supported MCP clients is not available.",
+		"Korean"             -> "The list of supported MCP clients is not available.",
+		"Spanish"            -> "The list of supported MCP clients is not available."
+	|>],
+	
+	"prefsNoMCPServers" -> LanguageSwitched["The list of default MCP servers is not available.", <|
+		"ChineseSimplified"  -> "The list of default MCP servers is not available.",
+		"ChineseTraditional" -> "The list of default MCP servers is not available.",
+		"French"             -> "The list of default MCP servers is not available.",
+		"Japanese"           -> "The list of default MCP servers is not available.",
+		"Korean"             -> "The list of default MCP servers is not available.",
+		"Spanish"            -> "The list of default MCP servers is not available."
+	|>]
+
 },
 
 
@@ -133,6 +178,62 @@
   ImageSize->#2,
   PlotRange->{0, 1}]&),
 
+"prefsConfiguredIcon" -> GraphicsBox[
+  {Thickness[0.07081099420209053], FaceForm[LightDarkSwitched[
+    RGBColor[0.20784313725490197`, 0.592156862745098, 0.10588235294117647`, 1.]]], 
+   FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{
+    12.707099914550781`, 10.473299980163574`}, {5.061100006103516, 2.8282999992370605`}, {
+    1.4160995483398438`, 6.473299980163574}, {0.00010013580322265625`, 5.060299873352051}, {
+    5.061100006103516, 0.00030040740966796875`}, {14.122099876403809`, 9.061300039291382}, {
+    12.707099914550781`, 10.473299980163574`}}}]},
+  AspectRatio->Automatic,
+  ImageSize->{16., 12.},
+  PlotRange->{{-0.5, 14.622100830078125`}, {-0.5, 10.97339916229248}}],
+
+"prefsConfigureAllIcon" -> GraphicsBox[
+  {Thickness[0.05644359935603517], 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{6.091000080108643, 
+     1.0880000591278076`}, {17.716001510620117`, 1.0880000591278076`}, {17.716001510620117`, 
+     2.749000072479248}, {6.091000080108643, 2.749000072479248}, {6.091000080108643, 
+     1.0880000591278076`}}}]}, 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{6.091000080108643, 
+     5.585000038146973}, {17.716001510620117`, 5.585000038146973}, {17.716001510620117`, 
+     7.246000289916992}, {6.091000080108643, 7.246000289916992}, {6.091000080108643, 
+     5.585000038146973}}}]}, 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{6.091000080108643, 
+     10.081000328063965`}, {17.716001510620117`, 10.081000328063965`}, {17.716001510620117`, 
+     11.742000579833984`}, {6.091000080108643, 11.742000579833984`}, {6.091000080108643, 
+     10.081000328063965`}}}]}, 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{
+     4.1138997077941895`, 12.829500198364258`}, {1.8678996562957764`, 10.582500219345093`}, {
+     0.7958998680114746, 11.654500126838684`}, {-0.00010061264038085938`, 10.859500050544739`}, {
+     1.8678996562957764`, 8.992500305175781}, {4.909899652004242, 12.035500228404999`}, {
+     4.1138997077941895`, 12.829500198364258`}}}]}, 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{
+     1.867499828338623, 6.086699962615967}, {0.7954998016357422, 7.157700061798096}, {
+     0.0004999637603759766, 6.36269998550415}, {1.867499828338623, 4.496699929237366}, {
+     4.909499883651733, 7.539699912071228}, {4.113499879837036, 8.33270001411438}, {1.867499828338623, 
+     6.086699962615967}}}]}, 
+   {FaceForm[LightDarkSwitched[
+     RGBColor[0.38823529411764707`, 0.38823529411764707`, 0.38823529411764707`, 1.]]], 
+    FilledCurveBox[{{{0, 2, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}}}, {{{
+     1.867499828338623, 1.5903000831604004`}, {0.7954998016357422, 2.6613001823425293`}, {
+     0.0004999637603759766, 1.866300106048584}, {1.867499828338623, 0.0003000497817993164}, {
+     4.909499883651733, 3.0433000326156616`}, {4.113499879837036, 3.8363001346588135`}, {
+     1.867499828338623, 1.5903000831604004`}}}]}},
+  AspectRatio->Automatic,
+  ImageSize->{19., 14.},
+  PlotRange->{{-0.5, 18.216800689697266`}, {-0.5, 13.329200744628906`}}],
 
 "prefsRemoveIcon" -> (GraphicsBox[
   {#1, LineBox[{{{0, 0}, {1, 1}}, {{1, 0}, {0, 1}}}]},

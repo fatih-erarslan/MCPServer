@@ -33,6 +33,16 @@ ldsGray[n_] := LightDarkSwitched[GrayLevel[n]]
 $allowDirectoryOperations = False;
 
 
+clientControlFrameOptions[opts___] := Sequence @@ {
+	opts,
+	BaselinePosition -> Baseline,
+	RoundingRadius -> 3,
+	FrameMargins -> {{7,7},{2,2}},
+	FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.7], ldsGray[0.85]]],
+	Background -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.94], ldsGray[0.97]]]
+}
+
+
 (* ::Section::Closed:: *)
 (*docsLink*)
 
@@ -45,7 +55,7 @@ docsLink[] :=
 				RoundingRadius -> 2,
 				FrameMargins -> {{5,5},{1,1}},
 				FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.7], ldsGray[0.85]]],
-				Background -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.9], ldsGray[0.97]]]],
+				Background -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.94], ldsGray[0.97]]]],
 			If[
 				TrueQ @ CurrentValue["OptionKey"],
 				CreateDocument[{
@@ -67,70 +77,182 @@ docsLink[] :=
 
 
 clientInterfaces[] :=
-	DynamicModule[{update = 0, clients, servers, configuredClients, clientNameSpacer, initDone},
+	DynamicModule[{update, clients, servers, globallyConfiguredClients, locallyConfiguredClients, detectedClients, otherClients, clientNameSpacer, initDone, refresh},
 
 		Dynamic[
 			Which[
+				update;
 				initDone =!= True,
 					ProgressIndicator[Appearance -> "Necklace"],
 
 				MatchQ[clients, Except[{__String}]],
-					Style["[[The list of supported MCP clients is not available.]]", Italic, FontColor -> ldsGray[0.5]],
+					Style[tr["prefsNoMCPClients"], Italic, FontColor -> ldsGray[0.5]],
 				MatchQ[servers, Except[{__String}]],
-					Style["[[The list of default MCP servers is not available.]]", Italic, FontColor -> ldsGray[0.5]],
-
-				configuredClients === clients (* all *),
-					Column[
-						Prepend[
-							clientRow[#, clientNameSpacer]& /@ configuredClients,
-							Style[tr["prefsHarnessesConfigured"], Smaller, FontColor -> ldsGray[0.5], Bold]
-						],
-						ItemSize -> Scaled[1]
-					],
-				MatchQ[configuredClients, {__String}], (* some *)
+					Style[tr["prefsNoMCPServers"], Italic, FontColor -> ldsGray[0.5]],
+				
+				True,
 					Column[
 						{
-							Column[
-								Prepend[
-									clientRow[#, clientNameSpacer]& /@ configuredClients,
-									Style[tr["prefsHarnessesConfigured"], Smaller, FontColor -> ldsGray[0.5], Bold]
-								],
-								Spacings -> {0.4,0.4}
+							If[
+								globallyConfiguredClients === {}, Nothing, 
+								Framed[
+									Column[
+										Prepend[
+											clientRow["Configured", #, clientNameSpacer, Dynamic[refresh]]& /@ globallyConfiguredClients,
+											Grid[{{
+												Pane[
+													icon["prefsConfiguredIcon"],
+													BaselinePosition -> Scaled[0.15]
+												],
+												Style[tr["prefsHarnessesConfigured"],
+													FontSize -> Inherited,
+													FontColor -> LightDarkSwitched[RGBColor["#408021"]],
+													FontWeight -> "DemiBold"
+												]
+											}}]
+										],
+										ItemSize -> Scaled[1],
+										Spacings -> {Automatic, {2 -> 1.5}}
+									],
+									FrameStyle -> LightDarkSwitched[ RGBColor["#B5CCAD"] ],
+									FrameMargins -> 15,
+									RoundingRadius -> 6
+								]
 							],
-							Column[
-								Prepend[
-									clientRow[#, clientNameSpacer]& /@ DeleteCases[clients, Alternatives @@ configuredClients],
-									Style[tr["prefsHarnessesMore"], Smaller, FontColor -> ldsGray[0.5], Bold]
-								],
-								Spacings -> {0.4,0.4}
+							
+							If[
+								detectedClients === {}, Nothing,
+								Framed[
+									Column[
+										Join[
+											{
+												Style[tr["prefsHarnessesDetected"],
+														FontSize -> Inherited,
+														FontColor -> ldsGray[0.4],
+														FontWeight -> "DemiBold"
+													],
+												configureAllButton[detectedClients, Dynamic[refresh]]
+											},
+											clientRow["Detected", #, clientNameSpacer, Dynamic[refresh]]& /@ detectedClients
+										],
+										ItemSize -> Scaled[1],
+										Spacings -> {Automatic, {2 -> 1, 3 -> 1}}
+									],
+									FrameStyle -> LightDarkSwitched[GrayLevel[0.8980], GrayLevel[0.2862]],
+									FrameMargins -> 15,
+									RoundingRadius -> 6
+								]
+							],
+							If[
+								otherClients === {}, Nothing,
+								Framed[
+									Column[
+										Prepend[
+											clientRow["Other", #, clientNameSpacer, Dynamic[refresh]]& /@ otherClients,
+											Style[
+												If[globallyConfiguredClients === detectedClients === {}, 
+													tr["prefsHarnessesAll"],
+													tr["prefsHarnessesMore"]
+												],
+												FontSize -> Inherited,
+												FontColor -> ldsGray[0.4],
+												FontWeight -> "DemiBold"
+											]
+										],
+										ItemSize -> Scaled[1],
+										Spacings -> {Automatic, {2 -> 1.5}}
+									],
+									FrameStyle -> LightDarkSwitched[GrayLevel[0.8980], GrayLevel[0.2862]],
+									FrameMargins -> 15,
+									RoundingRadius -> 6
+								]
 							]
 						},
-						Spacings -> 3,
-						Dividers -> Center,
-						FrameStyle -> ldsGray[0.85],
-						ItemSize -> Scaled[1]
-					],
-				True, (* none *)
-					Column[
-						clientRow[#, clientNameSpacer]& /@ clients,
-						ItemSize -> Scaled[1]
+						Spacings -> 1
 					]
 			],
-			TrackedSymbols :> {initDone}
+			TrackedSymbols :> {initDone, update}
 		],
 
 		Initialization :> (
 			initDone = False;
+			update = 0;
 			clients = Keys @ Wolfram`AgentTools`$SupportedMCPClients;
 			servers = Keys @ Wolfram`AgentTools`$DefaultMCPServers;
 			clientNameSpacer = PaneSelector[KeyValueMap[#1 -> #2["DisplayName"]&, Wolfram`AgentTools`$SupportedMCPClients], True];
-			configuredClients = Cases[clients, Alternatives @@
-				Map[#["ClientName"]&, Select[DeployedAgentTools[ ], MatchQ[#["Toolset"], "Wolfram" | "WolframLanguage"]&]]
+			(* If there are no stored settings for a client's selected toolset, initialize it to its default *)
+			Do[
+				CurrentValue[
+					$FrontEnd,
+					{PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client},
+					Wolfram`AgentTools`$SupportedMCPClients[client]["DefaultToolset"]
+				],
+				{client, clients}
 			];
+			SetAttributes[refresh, HoldAll];
+			refresh[evals___] := WithCleanup[
+				CompoundExpression[update, evals],
+				(*
+					globallyConfiguredClients is the list of clients with a relevant, global configuration.
+					If there are clients with relevant, per-directory configs but without a global config, 
+					those will be in locallyConfiguredClients -- and thus in detectedClients -- instead.
+				*)
+				With[{ configured = {#["ClientName"], #["Toolset"], #["Scope"]}& /@  DeployedAgentTools[ ] },
+					globallyConfiguredClients = Cases[configured, {name_, "Wolfram" | "WolframLanguage", "Global"} :> name];
+					locallyConfiguredClients = Cases[configured, {name_, "Wolfram" | "WolframLanguage", _File} :> name];
+				];
+				detectedClients = Complement[
+					Union[locallyConfiguredClients, Keys @ Wolfram`AgentTools`DetectedMCPClients[]],
+					globallyConfiguredClients
+				];
+				otherClients = Complement[clients, globallyConfiguredClients, detectedClients];
+				++update;
+			];
+			
+			refresh[ ];
 			initDone = True;
 		),
 		SynchronousInitialization -> False,
-		UnsavedVariables :> {update, clients, servers, configuredClients, clientNameSpacer, initDone}
+		UnsavedVariables :> {update, clients, servers, globallyConfiguredClients, locallyConfiguredClients, detectedClients, otherClients, clientNameSpacer, initDone, refresh}
+	]
+
+
+(* ::Section::Closed:: *)
+(*configureAllButton*)
+
+
+configureAllButton[detectedClients_, Dynamic[refresh_]] := 
+	MouseAppearance[
+		Button[
+			Framed[
+				Grid[{{
+					Pane[
+						icon["prefsConfigureAllIcon"],
+						BaselinePosition -> Scaled[0.15]
+					],
+					tr["prefsConfigureAllButton"]
+				}}],
+				clientControlFrameOptions[
+					FrameMargins -> {{15,15},{10,10}}
+				]
+			],
+			refresh @ Do[
+				DeployAgentTools[
+					client,
+					CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+					OverwriteTarget -> True
+				],
+				{client, detectedClients}
+			],
+			ImageSize -> Automatic,
+			BaseStyle -> {},
+			DefaultBaseStyle -> {},
+			Appearance -> None,
+			BaselinePosition -> Baseline,
+			Method -> "Queued"
+		]
+		,
+		"LinkHand"
 	]
 
 
@@ -139,11 +261,11 @@ clientInterfaces[] :=
 
 
 ClearAll[clientRow];
-clientRow[client_, spacer_] :=
+clientRow[category_, client_, spacer_, Dynamic[refresh_]] :=
 	Grid[
 		{{
 			clientName[client, spacer],
-			clientControls[client]
+			clientControls[category, client, Dynamic[refresh]]
 		}},
 		Dividers -> {{False, True, False}, None},
 		FrameStyle -> ldsGray[0.85],
@@ -188,90 +310,27 @@ clientName[client_, spacer_] :=
 
 
 (*
-FIXME: The UX calls for this interface to list two MCP servers: "ComputationTools", and "DevelopmentTools".
-However, Wolfram`AgentTools`$DefaultMCPServers currently returns a list of 4 servers, none of which have those
-names.
+Note: The UX calls for this interface to list two MCP servers: "ComputationTools", and "DevelopmentTools".
+However, $DefaultMCPServers currently returns a list of 4 servers, none of which have those names.
 
 So for now, the code below lists only the two names from the UX, and maps them to current names thusly:
 
 "Wolfram" === "ComputationTools"
 "WolframLanguage" === "DevelopmentTools"
 
-Once the naming of MCP servers in AgentTools catches up to the UX, this code will need to be adjusted to remove
-that name mapping.
+If the naming of MCP servers in $DefaultMCPServers ever changes in an incompatible way, this code will need
+to be adjusted to stay in sync.
 *)
 
 
-clientControls[client_] :=
-	DynamicModule[{update = 0, dirSettings},
+clientControls[category_, client_, Dynamic[refresh_]] :=
+	DynamicModule[{dirSettings},
 		Grid[
 			{
 				{
-					(* menu *)
-					PopupMenu[
-						Dynamic[update;
-							Switch[{#["Toolset"], #["Scope"]}& /@ DeployedAgentTools[client],
-								{___, {"Wolfram", "Global"}, ___}, update = 1; "ComputationTools",
-								{___, {"WolframLanguage", "Global"}, ___}, update = 1; "DevelopmentTools",
-								_, None
-							],
-							(Switch[#,
-								"ComputationTools",
-									DeployAgentTools[client, "Wolfram", OverwriteTarget -> True],
-								"DevelopmentTools",
-									DeployAgentTools[client, "WolframLanguage", OverwriteTarget -> True],
-								None | 0,
-									(* Only delete global "Wolfram" or "WolframLanguage" deployments *)
-									DeleteObject @ Select[
-										DeployedAgentTools @ client,
-										#["Scope"] === "Global" && MatchQ[#["Toolset"], "Wolfram"|"WolframLanguage"]&
-									]
-							];
-							++update)&
-						]
-						,
-						{
-							None -> Dynamic[If[update === 0,
-								tr["prefsPickTool"],
-								tr["prefsNoTool"]
-							]],
-							Delimiter,
-							"ComputationTools" -> tr["prefsComputationTools"],
-							"DevelopmentTools" -> tr["prefsDevelopmentTools"]
-						},
-						Style[tr["prefsPickTool"], FontColor -> ldsGray[0.5]],
-						Framed[
-							Grid[
-								{{
-									Item[
-										Dynamic[update;
-											Switch[{#["Toolset"], #["Scope"]}& /@ DeployedAgentTools[client],
-												{___, {"Wolfram", "Global"}, ___}, tr["prefsComputationTools"],
-												{___, {"WolframLanguage", "Global"}, ___}, tr["prefsDevelopmentTools"],
-												_, Dynamic[If[update === 0,
-													Style[tr["prefsPickTool"], FontColor -> ldsGray[0.5]],
-													tr["prefsNoTool"]]]
-											]
-										],
-										ItemSize -> Fit
-									],
-									icon["prefsDownPointer", ldsGray[0.2], 10]
-								}},
-								Alignment -> Left
-							],
-							RoundingRadius -> 3,
-							ImageSize -> 400,
-							FrameStyle -> (*ldsGray[0.85]*)Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.7], ldsGray[0.85]]],
-							Background -> (*ldsGray[0.97]*)Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.9], ldsGray[0.97]]]
-						],
-						ImageSize -> 400,
-						Appearance -> "ActionMenu",
-						BaseStyle -> {}, (* needed to avoid very strange notebook-level settings in the Preferences Dialog *)
-						DefaultBaseStyle -> {},
-						DefaultMenuStyle -> {}
-					],
-					(* info link *)
-					Dynamic[update; infoLink[client]]
+					clientMenu[category, client, Dynamic[refresh]],
+					clientButton[category, client, Dynamic[refresh]],
+					clientInfoButton[category, client]
 				},
 				(*
 					We cache per-directory settings when each instance of the interface is
@@ -286,53 +345,147 @@ clientControls[client_] :=
 				If[dirSettings === {},
 					Nothing,
 					{
-						Pane[
-							Dynamic[
-								Grid[
-									{
-										{
-											Style[tr["prefsSpecificDirectories"], Smaller, FontColor -> ldsGray[0.5], Bold],
-											SpanFromLeft,
-											If[$allowDirectoryOperations, SpanFromLeft, Nothing]
-										},
-										Splice @ Table[
-											dirSettingsRow[Dynamic[dirSettings], i, dirSettings[[i]]],
-											{i, Length[dirSettings]}
-										]
-									},
-									Alignment -> {{Left, Right, Right}},
-									ItemSize -> {{Automatic, Fit, Automatic}},
-									Spacings -> {1,Automatic},
-									BaseStyle -> {PrivateFontOptions -> {"OperatorSubstitution" -> False}}
-								],
-								TrackedSymbols :> {dirSettings}
-							],
-							ImageSize -> 390,
-							Alignment -> Left,
-							ImageMargins -> 5
-						],
-						""
+						clientDirectorySettings[dirSettings],
+						"", (* action button column *)
+						"" (* info button column *)
 					}
 				]
 			},
 			Alignment -> Left,
-			BaselinePosition -> 1
+			BaselinePosition -> 1,
+			ItemSize -> Full
 		]
 	]
 
 
 (* ::Section::Closed:: *)
-(*infoLink*)
+(*clientMenu*)
+
+
+clientMenu[category_, client_, Dynamic[refresh_]] := 
+	PopupMenu[
+		Dynamic[
+			CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+			(
+				CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}] = #;
+				If[category === "Configured", refresh @ DeployAgentTools[client, #, OverwriteTarget -> True]]
+			)&
+		]
+		,
+		{
+			"Wolfram" -> tr["prefsComputationTools"],
+			"WolframLanguage" -> tr["prefsDevelopmentTools"]
+		},
+		None,
+		Framed[
+			Grid[
+				{{
+					Item[
+						Dynamic[
+							Replace[
+								CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+								{
+									"Wolfram" -> tr["prefsComputationTools"],
+									"WolframLanguage" -> tr["prefsDevelopmentTools"]
+								}
+							]
+						],
+						ItemSize -> Fit
+					],
+					icon["prefsDownPointer", ldsGray[0.2], 10]
+				}},
+				Alignment -> Left,
+				BaselinePosition -> {1,1}
+			],
+			clientControlFrameOptions[
+				ImageSize -> 320
+			]
+		],
+		ImageSize -> 320,
+		Appearance -> "ActionMenu",
+		BaseStyle -> {}, (* needed to avoid very strange notebook-level settings in the Preferences Dialog *)
+		DefaultBaseStyle -> {},
+		DefaultMenuStyle -> {}
+	]
+
+
+(* ::Section::Closed:: *)
+(*clientButton*)
+
+
+ClearAll[clientButton]
+
+
+clientButton[category: "Configured", client_, Dynamic[refresh_]] := 
+	MouseAppearance[
+		Button[ (* Disable button *)
+			Framed[
+				PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 0, Alignment -> Center],
+				clientControlFrameOptions[]
+			],
+			refresh @ DeleteObject @ Select[
+				DeployedAgentTools @ client,
+				#["Scope"] === "Global" && MatchQ[#["Toolset"], "Wolfram"|"WolframLanguage"]&
+			],
+			Method -> "Queued",
+			BaseStyle -> {},
+			DefaultBaseStyle -> {},
+			BaselinePosition -> Baseline,
+			Appearance -> None
+		],
+		"LinkHand"
+	]
+
+
+clientButton[category_, client_, Dynamic[refresh_]] := 
+	MouseAppearance[
+		Button[ (* Configure button *)
+			Framed[
+				PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 1, Alignment -> Center],
+				clientControlFrameOptions[]
+			],
+			refresh @ DeployAgentTools[
+				client,
+				CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+				OverwriteTarget -> True
+			],
+			Method -> "Queued",
+			BaseStyle -> {},
+			DefaultBaseStyle -> {},
+			BaselinePosition -> Baseline,
+			Appearance -> None
+		],
+		"LinkHand"
+	]
+
+
+(* ::Section::Closed:: *)
+(*clientInfoButton*)
 
 
 (* Styling of this link/tooltip matches the standard Preferences dialog styling for such. *)
 
 
-infoLink[client_] :=
+clientInfoButton[category_, client_] := 
 	Module[{objects, info, locations},
-		objects = DeployedAgentTools[client];
-		info = {#["Scope"], #["MCP"]["Server"], #["MCP"]["ConfigFile"]}& /@ objects;
-		locations = Cases[info, {"Global", "Wolfram" | "WolframLanguage", File[loc_]} :> loc];
+		Switch[category,
+			"Configured",
+				(* link to the global prefs file we know exists *)
+				objects = DeployedAgentTools[client];
+				info = {#["Scope"], #["MCP"]["Server"], #["MCP"]["ConfigFile"]}& /@ objects;
+				locations = Cases[info, {"Global", "Wolfram" | "WolframLanguage", File[loc_]} :> loc],
+			"Detected",
+				(* link to where the global prefs file should be *)
+				locations = {FileNameJoin @ Replace[
+					Wolfram`AgentTools`$SupportedMCPClients[client]["InstallLocation"],
+					{
+						a_Association :> Lookup[a, $OperatingSystem, {}],
+						Except[_List] :> {}
+					}
+				]},
+			_,
+				locations = {}
+		];
 
 		If[
 			MatchQ[locations, {__String}],
@@ -362,7 +515,7 @@ infoLink[client_] :=
 							FontSize -> 11
 						}
 					],
-					SystemOpen @ DirectoryName @ First @ locations,
+					SystemOpen @ First @ locations,
 					Appearance -> None
 				]
 			],
@@ -372,11 +525,47 @@ infoLink[client_] :=
 
 
 (* ::Section::Closed:: *)
+(*clientDirectorySettings*)
+
+
+clientDirectorySettings[dirSettings_] := 
+	Pane[
+		Dynamic[
+			Grid[
+				{
+					{
+						Style[tr["prefsSpecificDirectories"], 
+							FontSize -> Inherited - 2,
+							FontColor -> ldsGray[0.537]
+						],
+						SpanFromLeft,
+						SpanFromLeft
+					},
+					Splice @ Table[
+						dirSettingsRow[Dynamic[dirSettings], i, dirSettings[[i]]],
+						{i, Length[dirSettings]}
+					]
+				},
+				Alignment -> {{Left, Right, Right}},
+				ItemSize -> {{Fit, Automatic, Automatic}},
+				Spacings -> {1, Automatic},
+				BaseStyle -> {PrivateFontOptions -> {"OperatorSubstitution" -> False}}
+			],
+			TrackedSymbols :> {dirSettings}
+		],
+		ImageSize -> 310,
+		Alignment -> Left,
+		ImageMargins -> 5
+	]
+
+
+(* ::Section::Closed:: *)
 (*dirSettingsRow*)
 
 
 dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 	{
+		(* directory display *)
 		MouseAppearance[
 			Button[
 				Row[{
@@ -392,23 +581,27 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				DefaultBaseStyle -> {},
 				Enabled -> active,
 				BaseStyle -> {
-					FontColor -> Dynamic[If[active && CurrentValue["MouseOver"], StandardBlue, ldsGray[0.5]]],
+					FontColor -> Dynamic[If[active && CurrentValue["MouseOver"], StandardBlue, ldsGray[0.2]]],
 					FontVariations -> If[active, {}, {"StrikeThrough" -> True}],
-					FontSize -> Inherited
+					FontSize -> Inherited - 2
 				},
+				BaselinePosition -> Baseline,
 				ImageMargins -> {{5,0},{0,0}},
 				Tooltip -> ToBoxes @ First @ obj["Scope"]
 			],
 			If[active, "LinkHand", Automatic]
 		],
+		(* toolset name *)
 		Style[
 			Replace[server, {
 				"Wolfram" :> tr["prefsComputationTools"],
 				"WolframLanguage" :> tr["prefsDevelopmentTools"]
 			}],
-			FontColor -> If[active, Inherited, ldsGray[0.5], Inherited],
-			FontVariations -> If[active, {}, {"StrikeThrough" -> True}]
+			FontColor -> If[active, Inherited, ldsGray[0.392], Inherited],
+			FontVariations -> If[active, {}, {"StrikeThrough" -> True}],
+			FontSize -> Inherited - 2
 		],
+		(* directory operation buttons, if any *)
 		If[$allowDirectoryOperations,
 			Button[
 				Mouseover[
@@ -425,7 +618,7 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				},
 				Tooltip -> ToBoxes @ tr["prefsUninstallTool"]
 			],
-			Nothing
+			SpanFromLeft
 		]
 	}
 
@@ -444,28 +637,58 @@ Deploy[
 			{
 				Grid[
 					{{
-						Item[tr["prefsSubtitle"], ItemSize -> Fit],
-						Item[docsLink[], Alignment -> Right]
+						Item[
+							Pane[
+								StringTemplate[
+										FrontEndResource["AgentToolsStrings", "prefsSubtitle"],
+										CombinerFunction -> Row, 
+										InsertionFunction -> Identity] @@
+									Table[
+										Tooltip[
+											Mouseover[
+												Row[{
+													Style[tr[id], FontColor -> LightDarkSwitched @ Black],
+													" ",
+													icon["prefsInfoIcon", LightDarkSwitched @ RGBColor["#898989"], 14]
+												}],
+												Row[{
+													Style[tr[id], FontColor -> LightDarkSwitched @ Gray],
+													" ",
+													icon["prefsInfoIcon", LightDarkSwitched @ RGBColor[0.692, 0.692, 0.692], 14]
+												}]
+											],
+											tr[id <> "Description"]
+										],
+										{id, {"prefsComputationTools", "prefsDevelopmentTools"}}
+									],
+								Alignment -> Left,
+								ImageMargins -> {{25,25},{0,15}}
+							],	
+							ItemSize -> Fit
+						],
+						Pane[
+							Item[docsLink[], Alignment -> Right],
+							Alignment -> Left,
+							ImageMargins -> {{0,20},{0,0}}
+						]
+							
 					}},
 					Alignment -> {Left, Center},
 					BaseStyle -> {LinebreakAdjustments -> {1, 10, 1, 0, 1}},
 					Spacings -> {2,0}
 				],
 
-				Style[tr["prefsComputationTools"], FontWeight -> "DemiBold"],
-				Style[tr["prefsComputationToolsDescription"], FontColor -> ldsGray[0.4], Italic],
-
-				Style[tr["prefsDevelopmentTools"], FontWeight -> "DemiBold"],
-				Style[tr["prefsDevelopmentToolsDescription"], FontColor -> ldsGray[0.4], Italic],
-
-				clientInterfaces[]
+				Pane[
+					clientInterfaces[],
+					Alignment -> Left,
+					ImageMargins -> {{15,5},{0,0}}
+				]
 			},
-			Dividers -> {None, {None, None, None, None, None, ldsGray[0.85], None}},
 			ItemSize -> Scaled[1],
-			Spacings -> {Automatic, {0,1.4,0.5,1.4,0.5,3}}
+			Spacings -> {Automatic, {0,1}}
 		],
 		Alignment -> Left,
-		ImageMargins -> {{25,25},{11,11}}
+		ImageMargins -> {0,{11,11}}
 	]
 ]
 
