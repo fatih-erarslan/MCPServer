@@ -222,37 +222,48 @@ clientInterfaces[] :=
 
 
 configureAllButton[detectedClients_, Dynamic[refresh_]] := 
-	MouseAppearance[
-		Button[
-			Framed[
-				Grid[{{
-					Pane[
-						icon["prefsConfigureAllIcon"],
-						BaselinePosition -> Scaled[0.15]
-					],
-					tr["prefsConfigureAllButton"]
-				}}],
-				clientControlFrameOptions[
-					FrameMargins -> {{15,15},{10,10}}
-				]
-			],
-			refresh @ Do[
-				DeployAgentTools[
-					client,
-					CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
-					OverwriteTarget -> True
+	DynamicModule[{clicked = False},
+		MouseAppearance[
+			Button[
+				Framed[
+					Grid[{{
+						Pane[
+							icon["prefsConfigureAllIcon"],
+							BaselinePosition -> Scaled[0.15]
+						],
+						PaneSelector[
+							{
+								False ->  tr["prefsConfigureAllButton"],
+								True -> ProgressIndicator[Appearance -> "Percolate"]
+							},
+							Dynamic[Now; clicked],
+							BaselinePosition -> Baseline
+						]
+					}}],
+					clientControlFrameOptions[
+						FrameMargins -> {{15,15},{10,10}}
+					]
 				],
-				{client, detectedClients}
-			],
-			ImageSize -> Automatic,
-			BaseStyle -> {},
-			DefaultBaseStyle -> {},
-			Appearance -> None,
-			BaselinePosition -> Baseline,
-			Method -> "Queued"
+				clicked = True;
+				refresh @ Do[
+					DeployAgentTools[
+						client,
+						CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+						OverwriteTarget -> True
+					],
+					{client, detectedClients}
+				],
+				ImageSize -> Automatic,
+				BaseStyle -> {},
+				DefaultBaseStyle -> {},
+				Enabled -> Dynamic[!clicked],
+				Appearance -> None,
+				BaselinePosition -> Baseline,
+				Method -> "Queued"
+			]
+			,
+			"LinkHand"
 		]
-		,
-		"LinkHand"
 	]
 
 
@@ -413,49 +424,54 @@ clientMenu[category_, client_, Dynamic[refresh_]] :=
 (*clientButton*)
 
 
-ClearAll[clientButton]
+SetAttributes[clientButtonTemplate, HoldRest]
+clientButtonTemplate[label_, action_] :=
+	DynamicModule[{clicked = False},
+		MouseAppearance[
+			Button[
+				Framed[
+					PaneSelector[
+						{
+							False -> label,
+							True -> ProgressIndicator[Appearance -> "Percolate"]
+						},
+						Dynamic[Now; clicked],
+						Alignment -> {Center, Center},
+						BaselinePosition -> Baseline
+					],
+					clientControlFrameOptions[]
+				],
+				clicked = True; action,
+				Method -> "Queued",
+				BaseStyle -> {},
+				DefaultBaseStyle -> {},
+				Enabled -> Dynamic[!clicked],
+				BaselinePosition -> Baseline,
+				Appearance -> None
+			],
+			"LinkHand"
+		]
+	]
 
 
 clientButton[category: "Configured", client_, Dynamic[refresh_]] := 
-	MouseAppearance[
-		Button[ (* Disable button *)
-			Framed[
-				PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 0, Alignment -> Center],
-				clientControlFrameOptions[]
-			],
-			refresh @ DeleteObject @ Select[
-				DeployedAgentTools @ client,
-				#["Scope"] === "Global" && MatchQ[#["Toolset"], "Wolfram"|"WolframLanguage"]&
-			],
-			Method -> "Queued",
-			BaseStyle -> {},
-			DefaultBaseStyle -> {},
-			BaselinePosition -> Baseline,
-			Appearance -> None
-		],
-		"LinkHand"
+	clientButtonTemplate[ (* Disable button *)
+		PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 0, Alignment -> Center],
+		refresh @ DeleteObject @ Select[
+			DeployedAgentTools @ client,
+			#["Scope"] === "Global" && MatchQ[#["Toolset"], "Wolfram"|"WolframLanguage"]&
+		]
 	]
 
 
 clientButton[category_, client_, Dynamic[refresh_]] := 
-	MouseAppearance[
-		Button[ (* Configure button *)
-			Framed[
-				PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 1, Alignment -> Center],
-				clientControlFrameOptions[]
-			],
-			refresh @ DeployAgentTools[
-				client,
-				CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
-				OverwriteTarget -> True
-			],
-			Method -> "Queued",
-			BaseStyle -> {},
-			DefaultBaseStyle -> {},
-			BaselinePosition -> Baseline,
-			Appearance -> None
-		],
-		"LinkHand"
+	clientButtonTemplate[ (* Configure button *)
+		PaneSelector[{0 -> tr["prefsDisableButton"], 1 -> tr["prefsConfigureButton"]}, 1, Alignment -> Center],
+		refresh @ DeployAgentTools[
+			client,
+			CurrentValue[$FrontEnd, {PrivateFrontEndOptions, "InterfaceSettings", "ServicesForAIs", "SelectedToolset", client}],
+			OverwriteTarget -> True
+		]
 	]
 
 
