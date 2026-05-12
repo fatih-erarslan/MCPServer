@@ -38,8 +38,8 @@ clientControlFrameOptions[opts___] := Sequence @@ {
 	BaselinePosition -> Baseline,
 	RoundingRadius -> 3,
 	FrameMargins -> {{7,7},{2,2}},
-	FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.7], ldsGray[0.85]]],
-	Background -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.94], ldsGray[0.97]]]
+	FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]],
+	Background -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]]
 }
 
 
@@ -54,8 +54,8 @@ docsLink[] :=
 				Row[{tr["prefsDocsLinkText"], " \[UpperRightArrow]"}, BaseStyle -> {FontSize -> Inherited - 2}],
 				RoundingRadius -> 2,
 				FrameMargins -> {{5,5},{1,1}},
-				FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.7], ldsGray[0.85]]],
-				Background -> Dynamic[If[CurrentValue["MouseOver"], ldsGray[0.94], ldsGray[0.97]]]],
+				FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]],
+				Background -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]]],
 			If[
 				TrueQ @ CurrentValue["OptionKey"],
 				CreateDocument[{
@@ -613,7 +613,7 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				DefaultBaseStyle -> {},
 				Enabled -> active,
 				BaseStyle -> {
-					FontColor -> Dynamic[If[active && CurrentValue["MouseOver"], StandardBlue, ldsGray[0.2]]],
+					FontColor -> Dynamic[If[active && CurrentValue["MouseOver"], #1, #2]]&[ StandardBlue, ldsGray[0.2]],
 					FontVariations -> If[active, {}, {"StrikeThrough" -> True}],
 					FontSize -> Inherited - 2
 				},
@@ -645,7 +645,7 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				Appearance -> None,
 				DefaultBaseStyle -> {},
 				BaseStyle -> {
-					FontColor -> Dynamic[If[CurrentValue["MouseOver"], StandardBlue, ldsGray[0.5]]],
+					FontColor -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[StandardBlue, ldsGray[0.5]],
 					ShowContents -> active
 				},
 				Tooltip -> ToBoxes @ tr["prefsUninstallTool"]
