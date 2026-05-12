@@ -240,7 +240,7 @@ configureAllButton[detectedClients_, Dynamic[refresh_]] :=
 								False ->  tr["prefsConfigureAllButton"],
 								True -> ProgressIndicator[Appearance -> "Percolate"]
 							},
-							Dynamic[Now; clicked],
+							Dynamic[clicked],
 							BaselinePosition -> Baseline
 						]
 					}}],
@@ -248,7 +248,7 @@ configureAllButton[detectedClients_, Dynamic[refresh_]] :=
 						FrameMargins -> {{15,15},{10,10}}
 					]
 				],
-				clicked = True;
+				FE`Evaluate[FEPrivate`Set[clicked, True]];
 				refresh @ Do[
 					DeployAgentTools[
 						client,
@@ -451,13 +451,14 @@ clientButtonTemplate[label_, action_] :=
 							False -> label,
 							True -> ProgressIndicator[Appearance -> "Percolate"]
 						},
-						Dynamic[Now; clicked],
+						Dynamic[clicked],
 						Alignment -> {Center, Center},
 						BaselinePosition -> Baseline
 					],
 					clientControlFrameOptions[]
 				],
-				clicked = True; action,
+				FE`Evaluate[FEPrivate`Set[clicked, True]];
+				action,
 				Method -> "Queued",
 				BaseStyle -> {},
 				DefaultBaseStyle -> {},
