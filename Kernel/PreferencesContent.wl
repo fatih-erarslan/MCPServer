@@ -977,8 +977,8 @@ incrementExpirationDate[] := DatePlus[Today, {1, "Month"}];
 
 showInstalledClientQ[clientAssoc_Association] := True /; TrueQ[clientAssoc["ShowAIBanner"]]
 
-showInstalledClientQ[clientAssoc_Association] := 
-	Module[{installedClients, deployedClients, isInstalled, isDeployed},
+showInstalledClientQ[clientAssoc_Association] :=
+	Module[{installedClients, deployedClients, isInstalled},
 		installedClients = getInstalledMCPClients[];
 		deployedClients = getDeployedClients[];
 		
