@@ -38,8 +38,8 @@ clientControlFrameOptions[opts___] := Sequence @@ {
 	BaselinePosition -> Baseline,
 	RoundingRadius -> 3,
 	FrameMargins -> {{7,7},{2,2}},
-	FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]],
-	Background -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]]
+	FrameStyle -> (Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]]),
+	Background -> (Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]])
 }
 
 
@@ -54,8 +54,8 @@ docsLink[] :=
 				Row[{tr["prefsDocsLinkText"], " \[UpperRightArrow]"}, BaseStyle -> {FontSize -> Inherited - 2}],
 				RoundingRadius -> 2,
 				FrameMargins -> {{5,5},{1,1}},
-				FrameStyle -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]],
-				Background -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]]],
+				FrameStyle -> (Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.7], ldsGray[0.85]]),
+				Background -> (Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[ ldsGray[0.94], ldsGray[0.97]])],
 			If[
 				TrueQ @ CurrentValue["OptionKey"],
 				CreateDocument[{
@@ -615,7 +615,7 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				DefaultBaseStyle -> {},
 				Enabled -> active,
 				BaseStyle -> {
-					FontColor -> Dynamic[If[active && CurrentValue["MouseOver"], #1, #2]]&[ StandardBlue, ldsGray[0.2]],
+					FontColor -> (Dynamic[If[active && CurrentValue["MouseOver"], #1, #2]]&[ StandardBlue, ldsGray[0.2]]),
 					FontVariations -> If[active, {}, {"StrikeThrough" -> True}],
 					FontSize -> Inherited - 2
 				},
@@ -647,7 +647,7 @@ dirSettingsRow[Dynamic[dirSettings_], i_, {obj_, server_, scope_, active_}] :=
 				Appearance -> None,
 				DefaultBaseStyle -> {},
 				BaseStyle -> {
-					FontColor -> Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[StandardBlue, ldsGray[0.5]],
+					FontColor -> (Dynamic[If[CurrentValue["MouseOver"], #1, #2]]&[StandardBlue, ldsGray[0.5]]),
 					ShowContents -> active
 				},
 				Tooltip -> ToBoxes @ tr["prefsUninstallTool"]
@@ -771,10 +771,6 @@ ManageWelcomeScreenData["Update"] :=
 ManageWelcomeScreenData // endExportedDefinition;
 
 
-removeUnusedKeys[assoc_Association, preservedKeys_List] := 
-	KeyDrop[assoc, Complement[Keys @ assoc, preservedKeys]];
-
-
 initializeWelcomeScreenData[] :=
 	<|
 		"DeployedAgentsData" -> updateDeployedAgentsData[None, False],
@@ -810,16 +806,16 @@ updateDeployedAgentsData[deployedAssoc_, closeButtonClicked_] :=
 		},
 		
 		assoc = deployedAssoc;
-		previousShowState = assoc["ShowAIBanner"];
 		
 		If[AssociationQ[assoc],
 			deployedDate = assoc["Date"];
-			
+			previousShowState = assoc["ShowAIBanner"];
 			If[dateExpiredQ[deployedDate],
 				assoc["ShowAIBanner"] = True
 			];
 			If[!DateObjectQ[deployedDate], assoc["Date"] = Today]
 			,
+			previousShowState = False;
 			assoc = <|"Date" -> Today, "ShowAIBanner" -> True|>
 		];
 		
@@ -840,7 +836,7 @@ updateDeployedAgentsData[deployedAssoc_, closeButtonClicked_] :=
 		
 		assoc["DeployedAITools"] = getDeployedClients[];
 		
-		removeUnusedKeys[assoc, {
+		KeyTake[assoc, {
 			"Date",
 			"ShowAIBanner",
 			"DeployedAITools"
@@ -852,17 +848,12 @@ updateAllClientData[clientAssocs_, closeButtonClicked_] :=
 	Module[
 		{
 			assocs,
-			clientNames,
-			installedClients,
-			date,
-			unusedKeys
+			clientNames
 		},
 		
 		assocs = clientAssocs;
 		
 		clientNames = Last /@ clientNameRules[];
-		installedClients = getInstalledMCPClients[];
-		date = Today;
 		
 		If[MatchQ[assocs, {__?AssociationQ}],
 			(* Update existing client data *)
@@ -896,9 +887,7 @@ updateClientData[clientAssoc_, closeButtonClicked_] :=
 			(* States *)
 			previousInstalledState, (* the previous installed state *)
 			currentInstalledState, (* the current installed state *)
-			previousShowState, (* the previous show state (i.e., did the stripe display and was the ClientName listed) *)
-			
-			unusedKeys
+			previousShowState (* the previous show state (i.e., did the stripe display and was the ClientName listed) *)
 		},
 		
 		assoc = clientAssoc;
@@ -953,7 +942,7 @@ updateClientData[clientAssoc_, closeButtonClicked_] :=
 			assoc["ShowAIBanner"] = False
 		];
 		
-		removeUnusedKeys[assoc, {
+		KeyTake[assoc, {
 			"ClientName",
 			"Date",
 			"IsInstalled",
@@ -985,6 +974,8 @@ initializeClientData[clientName_] :=
 
 incrementExpirationDate[] := DatePlus[Today, {1, "Month"}];
 
+
+showInstalledClientQ[clientAssoc_Association] := True /; TrueQ[clientAssoc["ShowAIBanner"]]
 
 showInstalledClientQ[clientAssoc_Association] := 
 	Module[{installedClients, deployedClients, isInstalled, isDeployed},
