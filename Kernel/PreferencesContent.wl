@@ -995,7 +995,13 @@ showInstalledClientQ[clientAssoc_Association] :=
 	];
 
 
-(* A date is expired if date is not a DateObject, or if today's date is later than the date *)
+(*
+	A date is expired if it is not a DateObject, or if today is the same day as
+	or later than the date (day-granularity). Setting Date -> Today makes it
+	instantly expired, which several callers rely on to surface the banner
+	immediately (see initializeClientData, updateClientData, and
+	updateDeployedAgentsData).
+*)
 dateExpiredQ[date_] :=
 	Or[
 		!DateObjectQ[date],
