@@ -7,7 +7,7 @@
 		"ChineseSimplified"  -> "\:53ef\:5bf9 AI \:73af\:5883\:8fdb\:884c\:914d\:7f6e\:ff0c\:4f7f\:5176\:53ef\:4ee5\:8bbf\:95ee `1` \:6216 `2`",
 		"ChineseTraditional" -> "AI \:74b0\:5883\:53ef\:914d\:7f6e\:70ba\:5b58\:53d6 `1` \:6216 `2`",
 		"French"             -> "Vous pouvez configurer les environnements d'IA pour acc\[EAcute]der \[AGrave] `1` ou `2`",
-		"Japanese"           -> "AI\:74b0\:5883\:306f\:ff0c`1` \:307e\:305f\:306f `2` \:306b\:30a2\:30af\:30bb\:30b9\:3067\:304d\:308b\:3088\:3046\:306b\:8a2d\:5b9a\:3067\:304d\:307e\:3059\:ff0e",
+		"Japanese"           -> "AI\:74b0\:5883\:306f\:ff0c`1`\:307e\:305f\:306f`2`\:306b\:30a2\:30af\:30bb\:30b9\:3067\:304d\:308b\:3088\:3046\:306b\:8a2d\:5b9a\:3067\:304d\:307e\:3059\:ff0e",
 		"Korean"             -> "AI \:d658\:acbd\:c774 `1` \:b610\:b294 `2`\:c5d0 \:c561\:c138\:c2a4\:d558\:b3c4\:b85d \:c124\:c815\:d560 \:c218 \:c788\:c2b5\:b2c8\:b2e4",
 		"Spanish"            -> "Los entornos de IA pueden configurarse para acceder a `1` o `2`"
 	|>],
