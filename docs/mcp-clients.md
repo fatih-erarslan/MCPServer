@@ -12,25 +12,28 @@ For convenience, `InstallMCPServer` and `UninstallMCPServer` functions are provi
 
 The following clients have built-in support for automatic configuration via `InstallMCPServer`:
 
-| Client | Canonical Name | Aliases | Config Format | Project Support |
-|--------|---------------|---------|---------------|-----------------|
-| Amazon Q Developer | `"AmazonQ"` | `"AmazonQDeveloper"`, `"Q"`, `"QDeveloper"` | JSON | Yes |
-| Augment Code | `"AugmentCode"` | `"Auggie"`, `"Augment"` | JSON | No |
-| Augment Code IDE | `"AugmentCodeIDE"` | `"AugmentIDE"`, `"AuggieIDE"` | JSON (array) | No |
-| Claude Code | `"ClaudeCode"` | — | JSON | Yes |
-| Claude Desktop | `"ClaudeDesktop"` | `"Claude"` | JSON | No |
-| Cline | `"Cline"` | — | JSON | No |
-| Copilot CLI | `"CopilotCLI"` | `"Copilot"` | JSON | No |
-| Cursor | `"Cursor"` | — | JSON | No |
-| Gemini CLI | `"GeminiCLI"` | `"Gemini"` | JSON | No |
-| Goose | `"Goose"` | — | YAML | No |
-| Antigravity | `"Antigravity"` | `"GoogleAntigravity"` | JSON | No |
-| Kiro | `"Kiro"` | — | JSON | Yes |
-| Codex CLI | `"Codex"` | `"OpenAICodex"` | TOML | Yes |
-| OpenCode | `"OpenCode"` | — | JSON | Yes |
-| Visual Studio Code | `"VisualStudioCode"` | `"VSCode"` | JSON | Yes |
-| Windsurf | `"Windsurf"` | `"Codeium"` | JSON | No |
-| Zed | `"Zed"` | — | JSON | Yes |
+| Client | Canonical Name | Aliases | Config Format | Project Support | Default Toolset |
+|--------|---------------|---------|---------------|-----------------|-----------------|
+| Amazon Q Developer | `"AmazonQ"` | `"AmazonQDeveloper"`, `"Q"`, `"QDeveloper"` | JSON | Yes | `"WolframLanguage"` |
+| Augment Code | `"AugmentCode"` | `"Auggie"`, `"Augment"` | JSON | No | `"WolframLanguage"` |
+| Augment Code IDE | `"AugmentCodeIDE"` | `"AugmentIDE"`, `"AuggieIDE"` | JSON (array) | No | `"WolframLanguage"` |
+| Claude Code | `"ClaudeCode"` | — | JSON | Yes | `"WolframLanguage"` |
+| Claude Desktop | `"ClaudeDesktop"` | `"Claude"` | JSON | No | `"Wolfram"` |
+| Cline | `"Cline"` | — | JSON | No | `"WolframLanguage"` |
+| Copilot CLI | `"CopilotCLI"` | `"Copilot"` | JSON | No | `"WolframLanguage"` |
+| Cursor | `"Cursor"` | — | JSON | No | `"WolframLanguage"` |
+| Gemini CLI | `"GeminiCLI"` | `"Gemini"` | JSON | No | `"WolframLanguage"` |
+| Goose | `"Goose"` | — | YAML | No | `"Wolfram"` |
+| Antigravity | `"Antigravity"` | `"GoogleAntigravity"` | JSON | No | `"WolframLanguage"` |
+| Junie (IDE + CLI) | `"Junie"` | `"JetBrainsJunie"` | JSON | Yes | `"WolframLanguage"` |
+| Kiro | `"Kiro"` | — | JSON | Yes | `"WolframLanguage"` |
+| Codex CLI | `"Codex"` | `"OpenAICodex"` | TOML | Yes | `"WolframLanguage"` |
+| OpenCode | `"OpenCode"` | — | JSON | Yes | `"WolframLanguage"` |
+| Visual Studio Code | `"VisualStudioCode"` | `"VSCode"` | JSON | Yes | `"WolframLanguage"` |
+| Windsurf | `"Windsurf"` | `"Codeium"` | JSON | No | `"WolframLanguage"` |
+| Zed | `"Zed"` | — | JSON | Yes | `"WolframLanguage"` |
+
+The **Default Toolset** is the [predefined server](servers.md) used when `InstallMCPServer`/`DeployAgentTools` is called without an explicit server (or with `Automatic`). Coding clients default to `"WolframLanguage"`; chat clients (Claude Desktop, Goose) default to `"Wolfram"`.
 
 ## Usage
 
@@ -42,7 +45,7 @@ Install an MCP server into a client application:
 InstallMCPServer["ClaudeDesktop"]
 ```
 
-This installs the default MCP server into Claude Desktop's configuration file.
+This installs the client's default toolset into Claude Desktop's configuration file. Each client has its own default — Claude Desktop and Goose default to `"Wolfram"`; coding clients (Claude Code, Cursor, VS Code, etc.) default to `"WolframLanguage"`. Pass `Automatic` explicitly for the same behavior, or pass a server name to override (see the table above for each client's default).
 
 ### Installing a Specific Server
 
@@ -268,6 +271,21 @@ extensions:
 ```
 
 Note: Goose uses YAML with an `extensions` key (not `mcpServers`) and renames several fields: `command` → `cmd`, `env` → `envs`. `InstallMCPServer` automatically adds the required `name`, `enabled: true`, `type: stdio`, and `timeout: 300` fields. Goose has no project-level configuration.
+
+### Junie (JetBrains IDE plugin + Junie CLI)
+
+| Scope | Config Location |
+|-------|----------------|
+| Global | `~/.junie/mcp/mcp.json` |
+| Project | `.junie/mcp/mcp.json` (in project root) |
+
+**Format:** Same as Claude Desktop (`mcpServers` key).
+
+Junie is JetBrains' AI coding agent. **A single `InstallMCPServer["Junie", ...]` call covers both the JetBrains IDE plugin and the standalone Junie CLI** — they read the same files. Specifically:
+
+- The user-scope file at `~/.junie/mcp/mcp.json` is shared across every JetBrains IDE that hosts the Junie plugin (IntelliJ IDEA, PyCharm, WebStorm, GoLand, PhpStorm, RubyMine, RustRover, Rider, etc.) **and** the standalone `junie` CLI. There is no per-IDE config split.
+- The project-scope file at `.junie/mcp/mcp.json` (in the project root) is designed to be checked into version control and is read by the same plugin and CLI.
+- Junie auto-reloads `mcp.json` changes, so no IDE restart is needed after running `InstallMCPServer`.
 
 ### Kiro
 
@@ -560,6 +578,22 @@ $SupportedMCPClients["ClaudeDesktop"]
 (* <|"Aliases" -> {"Claude"}, "ConfigFormat" -> "JSON", "ConfigKey" -> {"mcpServers"}, ...|> *)
 ```
 
+### Detecting Installed Clients
+
+`DetectedMCPClients[]` returns the subset of `$SupportedMCPClients` whose user-scope config file exists on the current machine — a quick way to discover which supported clients are actually installed before calling `InstallMCPServer`.
+
+```wl
+(* Names of clients that appear to be installed locally *)
+Keys @ DetectedMCPClients[ ]
+(* {"ClaudeCode", "Cursor", "VisualStudioCode", ...} *)
+
+(* Full metadata for detected clients *)
+DetectedMCPClients[ ]
+(* <|"ClaudeCode" -> <|...|>, "Cursor" -> <|...|>, ...|> *)
+```
+
+The result is keyed by canonical client name and preserves the ordering of `$SupportedMCPClients`. Detection is based purely on the existence of each client's `"InstallLocation"` config file for the current `$OperatingSystem`; project-scope config files (`"ProjectPath"`) are not checked.
+
 ## Adding Support for New Clients
 
 All client configuration is centralized in `$supportedMCPClients` in `Kernel/SupportedClients.wl`. To add support for a new MCP client, add an entry to this association.
@@ -576,6 +610,7 @@ Each entry is keyed by the canonical client name and contains an association wit
 | `"ConfigKey"` | Yes | Key path to the servers section (e.g. `{"mcpServers"}` or `{"servers"}`) |
 | `"URL"` | Yes | Client's website or download page |
 | `"InstallLocation"` | Yes | Config file path(s) per OS (see below) |
+| `"DefaultToolset"` | Yes | Predefined server name to use when `InstallMCPServer`/`DeployAgentTools` is called with `Automatic`. Use `"WolframLanguage"` for coding-oriented clients and `"Wolfram"` for general-purpose chat clients. |
 | `"ProjectPath"` | No | Relative path components for project-level config |
 | `"ServerConverter"` | No | Function to transform the standard server entry into a client-specific format |
 
@@ -584,6 +619,7 @@ Each entry is keyed by the canonical client name and contains an association wit
 ```wl
 "NewClient" -> <|
     "DisplayName"     -> "New Client",
+    "DefaultToolset"  -> "WolframLanguage",
     "Aliases"         -> { "NC" },
     "ConfigFormat"    -> "JSON",
     "ConfigKey"       -> { "mcpServers" },

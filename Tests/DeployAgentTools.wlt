@@ -1044,4 +1044,470 @@ VerificationTest[
     TestID -> "DeployAgentTools-Cleanup@@Tests/DeployAgentTools.wlt:1035,1-1045,2"
 ]
 
+(* ::**************************************************************************************************************:: *)
+(* ::Section::Closed:: *)
+(*Automatic toolset resolution (per-client DefaultToolset)*)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*DeployAgentTools with Automatic resolution*)
+VerificationTest[
+    autoDeployDir = CreateDirectory[ ];
+    autoDeployAuto = DeployAgentTools[
+        { "ClaudeCode", autoDeployDir },
+        Automatic,
+        "VerifyLLMKit" -> False
+    ];
+    autoDeployAuto[ "Toolset" ],
+    "WolframLanguage",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-Automatic-ClaudeCode@@Tests/DeployAgentTools.wlt:1054,1-1065,2"
+]
+
+VerificationTest[
+    autoDeployAutoUUID = autoDeployAuto[ "UUID" ];
+    Quiet @ catchAlways @ DeleteObject @ autoDeployAuto;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    autoDeployDir = CreateDirectory[ ];
+    autoDeploy1Arg = DeployAgentTools[
+        { "ClaudeCode", autoDeployDir },
+        "VerifyLLMKit" -> False
+    ];
+    autoDeploy1Arg[ "Toolset" ],
+    "WolframLanguage",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-1Arg-ClaudeCode@@Tests/DeployAgentTools.wlt:1067,1-1080,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*DeployAgentTools Automatic with File target + ApplicationName*)
+(* For arbitrary File[...] targets, an explicit ApplicationName option must
+   drive the Automatic toolset choice instead of falling through to "Wolfram". *)
+VerificationTest[
+    Quiet @ catchAlways @ DeleteObject @ autoDeploy1Arg;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    autoDeployDir = CreateDirectory[ ];
+    autoDeployFile = File @ FileNameJoin @ { autoDeployDir, "custom_config_" <> CreateUUID[ ] <> ".json" };
+    autoDeployFileApp = DeployAgentTools[
+        autoDeployFile,
+        Automatic,
+        "ApplicationName" -> "Cline",
+        "VerifyLLMKit"    -> False
+    ];
+    autoDeployFileApp[ "Toolset" ],
+    "WolframLanguage",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-Automatic-File-AppName-Cline@@Tests/DeployAgentTools.wlt:1087,1-1102,2"
+]
+
+VerificationTest[
+    Quiet @ catchAlways @ DeleteObject @ autoDeployFileApp;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    autoDeployDir = CreateDirectory[ ];
+    autoDeployFile = File @ FileNameJoin @ { autoDeployDir, "custom_config_" <> CreateUUID[ ] <> ".json" };
+    autoDeployFileChat = DeployAgentTools[
+        autoDeployFile,
+        Automatic,
+        "ApplicationName" -> "ClaudeDesktop",
+        "VerifyLLMKit"    -> False
+    ];
+    autoDeployFileChat[ "Toolset" ],
+    "Wolfram",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-Automatic-File-AppName-ClaudeDesktop@@Tests/DeployAgentTools.wlt:1104,1-1119,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*DeployAgentTools Automatic with recognizable File target (no ApplicationName)*)
+(* When the File[...] path itself identifies a known client, Automatic must
+   pick up that client's DefaultToolset without needing an explicit
+   "ApplicationName" option.  These guard against regressions where
+   path-based detection silently drops back to "Wolfram". *)
+
+(* .mcp.json -> ClaudeCode -> "WolframLanguage" *)
+VerificationTest[
+    Quiet @ catchAlways @ DeleteObject @ autoDeployFileChat;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    autoDeployDir = CreateDirectory[ ];
+    autoDeployFile = File @ FileNameJoin @ { autoDeployDir, ".mcp.json" };
+    autoDeployFilePath = DeployAgentTools[
+        autoDeployFile,
+        Automatic,
+        "VerifyLLMKit" -> False
+    ];
+    autoDeployFilePath[ "Toolset" ],
+    "WolframLanguage",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-Automatic-File-ClaudeCodeProject@@Tests/DeployAgentTools.wlt:1130,1-1144,2"
+]
+
+(* .vscode/mcp.json -> VisualStudioCode -> "WolframLanguage" *)
+VerificationTest[
+    Quiet @ catchAlways @ DeleteObject @ autoDeployFilePath;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    autoDeployDir = CreateDirectory[ ];
+    CreateDirectory @ FileNameJoin @ { autoDeployDir, ".vscode" };
+    autoDeployFile = File @ FileNameJoin @ { autoDeployDir, ".vscode", "mcp.json" };
+    autoDeployFileVSCode = DeployAgentTools[
+        autoDeployFile,
+        Automatic,
+        "VerifyLLMKit" -> False
+    ];
+    autoDeployFileVSCode[ "Toolset" ],
+    "WolframLanguage",
+    SameTest -> Equal,
+    TestID   -> "DeployAgentTools-Automatic-File-VSCodeProject@@Tests/DeployAgentTools.wlt:1147,1-1162,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Cleanup*)
+VerificationTest[
+    Quiet @ catchAlways @ DeleteObject @ autoDeployFileVSCode;
+    Quiet @ DeleteDirectory[ autoDeployDir, DeleteContents -> True ];
+    True,
+    True,
+    TestID -> "DeployAgentTools-Automatic-Cleanup@@Tests/DeployAgentTools.wlt:1167,1-1173,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Section::Closed:: *)
+(*DeployAgentTools[All, ...]*)
+(* These tests redirect $HomeDirectory and $deploymentsPath so that real client
+   config files on the test machine are not touched, and pin
+   $SupportedMCPClients to a small set of clients that have valid install
+   locations on the current operating system. *)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Setup*)
+VerificationTest[
+    $allTestTmpHome    = CreateDirectory[ ];
+    $allTestDeployPath = FileNameJoin @ { $allTestTmpHome, ".deployments" };
+    $allTestClients    = KeyTake[
+        Wolfram`AgentTools`$SupportedMCPClients,
+        { "Cursor", "ClaudeCode" }
+    ];
+    Length @ $allTestClients,
+    2,
+    TestID -> "DeployAgentTools-All-Setup@@Tests/DeployAgentTools.wlt:1186,1-1196,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Basic Result Shape*)
+VerificationTest[
+    $allDep1 = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allTestDeployPath
+        },
+        DeployAgentTools[ All, "VerifyLLMKit" -> False ]
+    ],
+    { _AgentToolsDeployment, _AgentToolsDeployment },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-BasicResultShape@@Tests/DeployAgentTools.wlt:1201,1-1213,2"
+]
+
+VerificationTest[
+    Length @ $allDep1,
+    Length @ $allTestClients,
+    TestID -> "DeployAgentTools-All-LengthMatchesClients@@Tests/DeployAgentTools.wlt:1215,1-1219,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Per-Client DefaultToolset (Automatic Server)*)
+(* With server = Automatic (the default), each deployment should pick up its
+   client's "DefaultToolset" from $SupportedMCPClients.  Both Cursor and
+   ClaudeCode are coding clients -> "WolframLanguage". *)
+VerificationTest[
+    Sort @ Map[ #[ "Toolset" ] &, $allDep1 ],
+    { "WolframLanguage", "WolframLanguage" },
+    TestID -> "DeployAgentTools-All-AutomaticToolsetPerClient@@Tests/DeployAgentTools.wlt:1227,1-1231,2"
+]
+
+VerificationTest[
+    Sort @ Map[ #[ "ClientName" ] &, $allDep1 ],
+    Sort @ Keys @ $allTestClients,
+    TestID -> "DeployAgentTools-All-CoversEveryClient@@Tests/DeployAgentTools.wlt:1233,1-1237,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Re-Deploy Without Overwrite Returns Missing Entries*)
+VerificationTest[
+    $allDep2 = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allTestDeployPath
+        },
+        Quiet[
+            DeployAgentTools[ All, "VerifyLLMKit" -> False ],
+            { DeployAgentTools::DeploymentsExistWarning }
+        ]
+    ],
+    { Missing[ "DeploymentExists", _ ], Missing[ "DeploymentExists", _ ] },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-MissingDeploymentExistsEntries@@Tests/DeployAgentTools.wlt:1242,1-1257,2"
+]
+
+VerificationTest[
+    Sort @ Map[ #[[ 2 ]] &, $allDep2 ],
+    Sort @ Keys @ $allTestClients,
+    TestID -> "DeployAgentTools-All-MissingTargetsAreClientNames@@Tests/DeployAgentTools.wlt:1259,1-1263,2"
+]
+
+(* The DeploymentsExistWarning message should be issued when at least one
+   client is skipped due to an existing deployment. *)
+VerificationTest[
+    Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allTestDeployPath
+        },
+        DeployAgentTools[ All, "VerifyLLMKit" -> False ]
+    ],
+    _List,
+    { DeployAgentTools::DeploymentsExistWarning },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-WarningMessageIssued@@Tests/DeployAgentTools.wlt:1267,1-1280,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*OverwriteTarget -> True Replaces Every Deployment*)
+VerificationTest[
+    $allDep1UUIDs = Sort @ Map[ #[ "UUID" ] &, $allDep1 ];
+    $allDep3 = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allTestDeployPath
+        },
+        DeployAgentTools[ All, OverwriteTarget -> True, "VerifyLLMKit" -> False ]
+    ],
+    { _AgentToolsDeployment, _AgentToolsDeployment },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-OverwriteShape@@Tests/DeployAgentTools.wlt:1285,1-1298,2"
+]
+
+VerificationTest[
+    (* All UUIDs in the new result should be different from the originals *)
+    Intersection[ Sort @ Map[ #[ "UUID" ] &, $allDep3 ], $allDep1UUIDs ],
+    { },
+    TestID -> "DeployAgentTools-All-OverwriteNewUUIDs@@Tests/DeployAgentTools.wlt:1300,1-1305,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Explicit Server Argument*)
+(* DeployAgentTools[All, server, ...] should use the given server for every
+   client instead of falling back to per-client DefaultToolset. *)
+VerificationTest[
+    $allDep4 = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allTestDeployPath
+        },
+        DeployAgentTools[
+            All,
+            "Wolfram",
+            OverwriteTarget -> True,
+            "VerifyLLMKit"  -> False
+        ]
+    ],
+    { _AgentToolsDeployment, _AgentToolsDeployment },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-ExplicitServerShape@@Tests/DeployAgentTools.wlt:1312,1-1329,2"
+]
+
+VerificationTest[
+    Sort @ DeleteDuplicates @ Map[ #[ "Toolset" ] &, $allDep4 ],
+    { "Wolfram" },
+    TestID -> "DeployAgentTools-All-ExplicitServerOverridesDefault@@Tests/DeployAgentTools.wlt:1331,1-1335,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*1-Argument Form Defaults to Automatic*)
+(* DeployAgentTools[All] (no server argument) should be equivalent to
+   DeployAgentTools[All, Automatic, ...].  Use a fresh deployments path so
+   nothing already exists. *)
+VerificationTest[
+    $allDep5Path = FileNameJoin @ { $allTestTmpHome, ".deployments_1arg" };
+    $allDep5 = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients = $allTestClients,
+            $HomeDirectory                          = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath = $allDep5Path
+        },
+        (* Use OverwriteTarget so we don't conflict with the configs already
+           written under $allTestTmpHome by earlier tests. *)
+        DeployAgentTools[ All, OverwriteTarget -> True, "VerifyLLMKit" -> False ]
+    ],
+    { _AgentToolsDeployment, _AgentToolsDeployment },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-1ArgForm@@Tests/DeployAgentTools.wlt:1343,1-1358,2"
+]
+
+VerificationTest[
+    (* 1-arg form falls through to per-client DefaultToolset, like Automatic *)
+    Sort @ DeleteDuplicates @ Map[ #[ "Toolset" ] &, $allDep5 ],
+    { "WolframLanguage" },
+    TestID -> "DeployAgentTools-All-1ArgFormUsesDefaultToolset@@Tests/DeployAgentTools.wlt:1360,1-1365,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*resolveServerForClient Helper*)
+(* Unit tests for the per-client server resolver used by deployAllAgentTools.
+   When server is Automatic, each client's own DefaultToolset is used; an
+   explicit server passes through. *)
+VerificationTest[
+    resolveServerForClient = Wolfram`AgentTools`DeployAgentTools`Private`resolveServerForClient;
+    resolveServerForClient[ "Cursor", Automatic ],
+    "WolframLanguage",
+    TestID -> "DeployAgentTools-All-resolveServerForClient-CursorAutomatic@@Tests/DeployAgentTools.wlt:1373,1-1378,2"
+]
+
+VerificationTest[
+    resolveServerForClient[ "ClaudeDesktop", Automatic ],
+    "Wolfram",
+    TestID -> "DeployAgentTools-All-resolveServerForClient-ClaudeDesktopAutomatic@@Tests/DeployAgentTools.wlt:1380,1-1384,2"
+]
+
+VerificationTest[
+    resolveServerForClient[ "Cursor", "Wolfram" ],
+    "Wolfram",
+    TestID -> "DeployAgentTools-All-resolveServerForClient-ExplicitPassthrough@@Tests/DeployAgentTools.wlt:1386,1-1390,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*ApplicationName Doesn't Override Per-Client Default*)
+(* When server is Automatic, an explicit "ApplicationName" option must not
+   override each client's own DefaultToolset.  Without the resolveServerForClient
+   indirection, DeployAgentTools[target, Automatic, opts] gives ApplicationName
+   precedence over target-based resolution, which would silently rewrite every
+   client's toolset to whatever ApplicationName resolves to. *)
+VerificationTest[
+    $allDepAppName = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients    = $allTestClients,
+            $HomeDirectory                             = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath =
+                FileNameJoin @ { $allTestTmpHome, ".deployments_appname" }
+        },
+        DeployAgentTools[
+            All,
+            "VerifyLLMKit"    -> False,
+            "ApplicationName" -> "ClaudeDesktop"
+        ]
+    ],
+    { _AgentToolsDeployment, _AgentToolsDeployment },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-ApplicationName-Setup@@Tests/DeployAgentTools.wlt:1400,1-1417,2"
+]
+
+VerificationTest[
+    (* ClaudeDesktop's DefaultToolset is "Wolfram"; if ApplicationName were
+       being honored as the default-toolset selector, both deployments would
+       come back as "Wolfram".  Both Cursor and ClaudeCode are coding clients,
+       so the correct result is "WolframLanguage" for both. *)
+    Sort @ DeleteDuplicates @ Map[ #[ "Toolset" ] &, $allDepAppName ],
+    { "WolframLanguage" },
+    TestID -> "DeployAgentTools-All-ApplicationName-PerClientDefault@@Tests/DeployAgentTools.wlt:1419,1-1427,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Unsupported Clients Return Missing["Unsupported", ...]*)
+(* Clients without an InstallLocation entry for the current operating system
+   should be reported as Missing["Unsupported", {client, $OperatingSystem}]
+   rather than failing the entire DeployAgentTools[All, ...] call. *)
+
+(* Synthetic client whose InstallLocation never matches any real OS *)
+$alwaysUnsupportedEntry = <|
+    "Aliases"         -> { },
+    "ConfigFormat"    -> "JSON",
+    "ConfigKey"       -> { "mcpServers" },
+    "DefaultToolset"  -> "WolframLanguage",
+    "DisplayName"     -> "Always Unsupported Test Client",
+    "InstallLocation" -> <| "DefinitelyNotARealOS" :> { "/never/used" } |>,
+    "Name"            -> "AlwaysUnsupported",
+    "ProjectSupport"  -> False,
+    "ServerConverter" -> Identity,
+    "URL"             -> "https://example.com"
+|>;
+
+VerificationTest[
+    $allDepUnsupported = Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients    = <|
+                KeyTake[ Wolfram`AgentTools`$SupportedMCPClients, { "Cursor" } ],
+                "AlwaysUnsupported" -> $alwaysUnsupportedEntry
+            |>,
+            $HomeDirectory                             = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath =
+                FileNameJoin @ { $allTestTmpHome, ".deployments_unsupported" }
+        },
+        DeployAgentTools[ All, "VerifyLLMKit" -> False ]
+    ],
+    _List? (Length @ # === 2 &),
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-UnsupportedClientShape@@Tests/DeployAgentTools.wlt:1450,1-1466,2"
+]
+
+VerificationTest[
+    Cases[ $allDepUnsupported, _Missing ],
+    { Missing[ "Unsupported", { "AlwaysUnsupported", $OperatingSystem } ] },
+    TestID -> "DeployAgentTools-All-UnsupportedClientPayload@@Tests/DeployAgentTools.wlt:1468,1-1472,2"
+]
+
+VerificationTest[
+    Length @ Cases[ $allDepUnsupported, _AgentToolsDeployment ],
+    1,
+    TestID -> "DeployAgentTools-All-UnsupportedClientStillDeploysSupported@@Tests/DeployAgentTools.wlt:1474,1-1478,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*DeploymentsExistWarning Only Fires for DeploymentExists*)
+(* When only unsupported clients are skipped (no DeploymentExists entries),
+   AgentTools::DeploymentsExistWarning must NOT be issued. *)
+VerificationTest[
+    Block[
+        {
+            Wolfram`AgentTools`$SupportedMCPClients    = <|
+                "AlwaysUnsupported" -> $alwaysUnsupportedEntry
+            |>,
+            $HomeDirectory                             = $allTestTmpHome,
+            Wolfram`AgentTools`Common`$deploymentsPath =
+                FileNameJoin @ { $allTestTmpHome, ".deployments_unsupported_only" }
+        },
+        DeployAgentTools[ All, "VerifyLLMKit" -> False ]
+    ],
+    { Missing[ "Unsupported", { "AlwaysUnsupported", $OperatingSystem } ] },
+    { },
+    SameTest -> MatchQ,
+    TestID   -> "DeployAgentTools-All-NoWarningForUnsupportedOnly@@Tests/DeployAgentTools.wlt:1485,1-1501,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*Cleanup*)
+VerificationTest[
+    Quiet @ DeleteDirectory[ $allTestTmpHome, DeleteContents -> True ];
+    True,
+    True,
+    TestID -> "DeployAgentTools-All-Cleanup@@Tests/DeployAgentTools.wlt:1506,1-1511,2"
+]
+
 (* :!CodeAnalysis::EndBlock:: *)

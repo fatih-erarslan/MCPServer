@@ -38,7 +38,11 @@ InstallMCPServer[ target_, opts: OptionsPattern[ ] ] :=
     catchMine @ InstallMCPServer[ target, Automatic, opts ];
 
 InstallMCPServer[ target_, Automatic, opts: OptionsPattern[ ] ] :=
-    catchMine @ InstallMCPServer[ target, $defaultMCPServer, opts ];
+    catchMine @ InstallMCPServer[
+        target,
+        defaultToolsetForTarget[ target, OptionValue[ "ApplicationName" ] ],
+        opts
+    ];
 
 InstallMCPServer[ target_File? fileQ, server0_String? pacletQualifiedNameQ, opts: OptionsPattern[ ] ] :=
     catchMine @ (
@@ -540,6 +544,7 @@ guessClientName[ file_? fileQ ] := Enclose[
             { __, ".zed", "settings.json" }, Throw[ "Zed" ],
             { __, ".amazonq", "mcp.json" }, Throw[ "AmazonQ" ],
             { __, ".aws", "amazonq", "mcp.json" }, Throw[ "AmazonQ" ],
+            { __, ".junie", "mcp", "mcp.json" }, Throw[ "Junie" ],
             { __, "augment.vscode-augment", "augment-global-state", "mcpservers.json" }, Throw[ "AugmentCodeIDE" ]
         ];
 

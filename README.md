@@ -71,6 +71,8 @@ InstallMCPServer["ClaudeDesktop"]
 (* Out: Success["InstallMCPServer", <|...|>] *)
 ```
 
+When no server is specified, each named client gets a sensible default — chat clients (Claude Desktop, Goose) get the general-purpose `"Wolfram"` server, while coding clients (Claude Code, Cursor, VS Code, etc.) get `"WolframLanguage"`. For `File[...]` targets, the same per-client default applies when the path or content identifies a known client (or `"ApplicationName"` is supplied); otherwise it falls back to `"Wolfram"`. Pass an explicit server name as the second argument to override.
+
 After restarting Claude Desktop, it will have access to Wolfram knowledge and tools:
 
 ![Claude Desktop Screenshot](.github/images/sk6raevruc0q.png)
@@ -126,6 +128,7 @@ AgentTools can be installed into the following MCP client applications:
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `"GeminiCLI"` | No |
 | [Goose](https://block.github.io/goose/) | `"Goose"` | No |
 | [Google Antigravity](https://antigravity.google) | `"Antigravity"` | No |
+| [Junie](https://www.jetbrains.com/junie/) (JetBrains IDE plugin + CLI) | `"Junie"` | Yes |
 | [OpenAI Codex](https://openai.com/codex) | `"Codex"` | Yes |
 | [OpenCode](https://opencode.ai) | `"OpenCode"` | Yes |
 | [Visual Studio Code](https://code.visualstudio.com) | `"VisualStudioCode"` | Yes |
@@ -270,7 +273,9 @@ CreateMCPServer["My MCP Server", <|
 | `InstallMCPServer[client, server]` | Install a specific server for a client |
 | `UninstallMCPServer[client]` | Remove all servers from a client |
 | `UninstallMCPServer[client, name]` | Remove a specific server from a client |
+| `DetectedMCPClients[]` | Subset of `$SupportedMCPClients` whose config file exists on this machine |
 | `DeployAgentTools[target]` | Deploy tools to a client with tracked deployment management |
+| `DeployAgentTools[All]` | Deploy tools to every client in `$SupportedMCPClients` (see [docs/deploy-agent-tools.md](docs/deploy-agent-tools.md#deploying-to-all-clients)) |
 | `ValidateAgentToolsPacletExtension[paclet]` | Validate an `"AgentTools"` paclet extension |
 | `DeployedAgentTools[]` | List all tracked deployments |
 | `CreatePreferencesContent[]` | Build the preferences panel UI for managing deployed Wolfram toolsets (see [docs/preferences-content.md](docs/preferences-content.md)) |
