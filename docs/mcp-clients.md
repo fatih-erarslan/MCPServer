@@ -249,6 +249,7 @@ Notes:
 - Note the directory split: the IDE/desktop app uses `~/.gemini/antigravity/` or `~/.gemini/config/` (depending on migration state) while the CLI uses `~/.gemini/antigravity-cli/` — sibling directories, different files. A single `InstallMCPServer["AntigravityCLI"]` only covers the CLI; install to `"Antigravity"` as well if you also use the desktop app.
 - Workspace skills moved from Gemini CLI's `.gemini/skills/` to Antigravity CLI's `.agents/skills/`, and workspace MCP config moved from `.gemini/settings.json` to `.agents/mcp_config.json`. If you previously checked in a `.gemini/settings.json` for Gemini CLI users, you'll need to add an equivalent `.agents/mcp_config.json` for Antigravity CLI users.
 - Antigravity CLI renamed the HTTP-transport field from `"url"` (Gemini CLI) to `"serverUrl"`. The Wolfram MCP server is stdio (`command`/`args`), so this doesn't affect `InstallMCPServer` output — relevant only if you hand-edit an HTTP entry.
+- On Windows, `InstallMCPServer` automatically rewrites the `command` to its 8.3 short-path form (e.g. `C:\PROGRA~1\WOLFRA~1\Wolfram\15.0\wolfram.exe`) for both `"Antigravity"` and `"AntigravityCLI"`. The Antigravity CLI (observed at 1.0.3) shell-invokes the spawn command and splits on whitespace, so an unquoted `C:\Program Files\...` path causes the first token to be `C:\Program`, the spawn fails before MCP `initialize` completes, and `/mcp` then reports `failed to stop mcp instance: Wolfram: exit status 1`. Same fix we ship for Augment Code's CLI for the same reason.
 
 ### Augment Code
 
