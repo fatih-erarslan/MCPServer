@@ -85,43 +85,33 @@ $supportedMCPClients = <|
             "Windows" :> { $HomeDirectory, "AppData", "Roaming", "Block", "goose", "config", "config.yaml" }
         |>
     |>,
+    (* A single entry covers the Antigravity IDE, the Antigravity 2.0 desktop app, AND the
+       Antigravity CLI. They share one global MCP config file, so they MUST be one client
+       entry rather than two: two entries pointing at the same file would let
+       DeployAgentTools create two deployments for one file and let
+       DeleteObject[AgentToolsDeployment[...]] corrupt shared state. "AntigravityCLI" /
+       "GoogleAntigravityCLI" are therefore aliases, not separate clients.
+
+       Global path (antigravityInstallLocation): Antigravity 2.0 reads
+       ~/.gemini/config/mcp_config.json once a pre-2.0 install has migrated forward (the
+       installer drops a ~/.gemini/config/.migrated marker; ~/.gemini/config/ is the shared
+       per-user Antigravity dir). Pre-migration installs use the historical
+       ~/.gemini/antigravity/mcp_config.json. The CLI reads the same migrated
+       ~/.gemini/config/mcp_config.json (per the official gcli-migration guide); the
+       ~/.gemini/antigravity-cli/ dir holds CLI skills/cache/settings only, NOT mcp_config.
+
+       Workspace path (ProjectPath): the CLI reads project-scoped servers from
+       .agents/mcp_config.json, so InstallMCPServer[{"Antigravity"|"AntigravityCLI", dir}]
+       writes there. *)
     "Antigravity" -> <|
         "DisplayName"     -> "Antigravity",
         "DefaultToolset"  -> "WolframLanguage",
-        "Aliases"         -> { "GoogleAntigravity" },
+        "Aliases"         -> { "GoogleAntigravity", "AntigravityCLI", "GoogleAntigravityCLI" },
         "ConfigFormat"    -> "JSON",
         "ConfigKey"       -> { "mcpServers" },
         "URL"             -> "https://antigravity.google",
-        (* Antigravity 2.0 moves the MCP config to ~/.gemini/config/mcp_config.json for
-           installs that migrated forward from the pre-2.0 IDE. The 2.0 installer drops a
-           ~/.gemini/config/.migrated marker after the conversation/skills/MCP migration
-           completes; once present, the historical ~/.gemini/antigravity/mcp_config.json
-           is ignored by the IDE. Fresh 2.0 installs without a migration history keep the
-           original path. We detect the marker and route accordingly so a single
-           InstallMCPServer["Antigravity"] call lands in the file the running IDE actually
-           reads on both fresh and upgraded systems. *)
-        "InstallLocation" :> antigravityInstallLocation[ ]
-    |>,
-    "AntigravityCLI" -> <|
-        "DisplayName"     -> "Antigravity CLI",
-        "DefaultToolset"  -> "WolframLanguage",
-        "Aliases"         -> { "GoogleAntigravityCLI" },
-        "ConfigFormat"    -> "JSON",
-        "ConfigKey"       -> { "mcpServers" },
-        "URL"             -> "https://antigravity.google/docs/gcli-migration",
-        (* Per the official Gemini-CLI -> Antigravity-CLI migration guide
-           (https://antigravity.google/docs/gcli-migration), the CLI reads global MCP
-           servers from ~/.gemini/config/mcp_config.json and workspace servers from
-           .agents/mcp_config.json. The global file is the SAME one the migrated IDE reads
-           (~/.gemini/config/ is the shared per-user Antigravity config dir), so on a
-           migrated machine InstallMCPServer["Antigravity"] and ["AntigravityCLI"] target
-           the same file -- that is intentional and correct ("shared config across
-           Antigravity tools"). The ~/.gemini/antigravity-cli/ dir holds CLI skills/cache/
-           settings only, NOT mcp_config.json; writing a server there created a duplicate
-           definition that the CLI failed to reconcile ("failed to stop mcp instance:
-           Wolfram: exit status 1"). *)
         "ProjectPath"     -> { ".agents", "mcp_config.json" },
-        "InstallLocation" :> { $HomeDirectory, ".gemini", "config", "mcp_config.json" }
+        "InstallLocation" :> antigravityInstallLocation[ ]
     |>,
     "AugmentCode" -> <|
         "DisplayName"     -> "Augment Code",

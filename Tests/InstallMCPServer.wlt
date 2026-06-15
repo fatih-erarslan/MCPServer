@@ -420,52 +420,48 @@ VerificationTest[
     TestID   -> "AntigravityInstallLocation-MigratedVsFresh@@Tests/InstallMCPServer.wlt:398,1-417,2"
 ]
 
+(* "AntigravityCLI" and "GoogleAntigravityCLI" are aliases of the unified "Antigravity"
+   client, not separate entries -- the CLI and IDE share one global config file, so two
+   entries would collide in DeployAgentTools/DeleteObject. Resolution must canonicalize to
+   "Antigravity". *)
 VerificationTest[
-    Wolfram`AgentTools`Common`installLocation[ "AntigravityCLI", "Windows" ],
-    _File,
-    SameTest -> MatchQ,
-    TestID   -> "InstallLocation-AntigravityCLI-Windows@@Tests/InstallMCPServer.wlt:419,1-424,2"
-]
-
-VerificationTest[
-    Wolfram`AgentTools`Common`installLocation[ "AntigravityCLI", "MacOSX" ],
-    _File,
-    SameTest -> MatchQ,
-    TestID   -> "InstallLocation-AntigravityCLI-MacOSX@@Tests/InstallMCPServer.wlt:426,1-431,2"
-]
-
-VerificationTest[
-    Wolfram`AgentTools`Common`installLocation[ "AntigravityCLI", "Unix" ],
-    _File,
-    SameTest -> MatchQ,
-    TestID   -> "InstallLocation-AntigravityCLI-Unix@@Tests/InstallMCPServer.wlt:433,1-438,2"
-]
-
-(* The Antigravity CLI reads global MCP servers from ~/.gemini/config/mcp_config.json
-   (the shared per-user config dir), per the official gcli-migration guide -- NOT from
-   ~/.gemini/antigravity-cli/, which holds skills/cache/settings only. *)
-VerificationTest[
-    FileNameTake[
-        First @ Wolfram`AgentTools`Common`installLocation[ "AntigravityCLI", "Windows" ],
-        -2
-    ],
-    FileNameJoin @ { "config", "mcp_config.json" },
+    Wolfram`AgentTools`Common`toInstallName[ "AntigravityCLI" ],
+    "Antigravity",
     SameTest -> Equal,
-    TestID   -> "InstallLocation-AntigravityCLI-ConfigDir@@Tests/InstallMCPServer.wlt:440,1-450,2"
-]
-
-VerificationTest[
-    Wolfram`AgentTools`InstallMCPServer`Private`installDisplayName[ "AntigravityCLI" ],
-    "Antigravity CLI",
-    SameTest -> Equal,
-    TestID   -> "InstallDisplayName-AntigravityCLI@@Tests/InstallMCPServer.wlt:440,1-445,2"
+    TestID   -> "ToInstallName-AntigravityCLI@@Tests/InstallMCPServer.wlt:419,1-424,2"
 ]
 
 VerificationTest[
     Wolfram`AgentTools`Common`toInstallName[ "GoogleAntigravityCLI" ],
-    "AntigravityCLI",
+    "Antigravity",
     SameTest -> Equal,
-    TestID   -> "ToInstallName-GoogleAntigravityCLI@@Tests/InstallMCPServer.wlt:447,1-452,2"
+    TestID   -> "ToInstallName-GoogleAntigravityCLI@@Tests/InstallMCPServer.wlt:426,1-431,2"
+]
+
+(* installLocation alias-resolves internally, so the CLI alias yields the same _File as
+   the canonical "Antigravity" entry. *)
+VerificationTest[
+    Wolfram`AgentTools`Common`installLocation[ "AntigravityCLI", "Windows" ] ===
+        Wolfram`AgentTools`Common`installLocation[ "Antigravity", "Windows" ],
+    True,
+    SameTest -> Equal,
+    TestID   -> "InstallLocation-AntigravityCLI-AliasMatchesCanonical@@Tests/InstallMCPServer.wlt:433,1-440,2"
+]
+
+(* The unified entry has project support (the CLI's workspace path .agents/mcp_config.json),
+   reachable via the alias. *)
+VerificationTest[
+    TrueQ @ $SupportedMCPClients[ "Antigravity", "ProjectSupport" ],
+    True,
+    SameTest -> Equal,
+    TestID   -> "Antigravity-HasProjectSupport@@Tests/InstallMCPServer.wlt:443,1-448,2"
+]
+
+VerificationTest[
+    Wolfram`AgentTools`InstallMCPServer`Private`installDisplayName[ "Antigravity" ],
+    "Antigravity",
+    SameTest -> Equal,
+    TestID   -> "InstallDisplayName-Antigravity-Unified@@Tests/InstallMCPServer.wlt:450,1-455,2"
 ]
 
 (* ::**************************************************************************************************************:: *)
@@ -516,15 +512,19 @@ VerificationTest[
     TestID   -> "ProjectInstallLocation-Codex@@Tests/InstallMCPServer.wlt:436,1-445,2"
 ]
 
+(* Workspace install for the unified Antigravity entry goes to .agents/mcp_config.json
+   (the CLI's project path). projectInstallLocation is always called with the canonical
+   name -- InstallMCPServer[{"AntigravityCLI", dir}] canonicalizes via toInstallName first
+   -- so we test the canonical "Antigravity" here. *)
 VerificationTest[
     Module[ { path, result },
         path = FileNameJoin @ { $TemporaryDirectory, "TestProject" };
-        result = Wolfram`AgentTools`Common`projectInstallLocation[ "AntigravityCLI", path ];
+        result = Wolfram`AgentTools`Common`projectInstallLocation[ "Antigravity", path ];
         FileNameTake[ First @ result, -2 ]
     ],
     FileNameJoin @ { ".agents", "mcp_config.json" },
     SameTest -> Equal,
-    TestID   -> "ProjectInstallLocation-AntigravityCLI@@Tests/InstallMCPServer.wlt:447,1-456,2"
+    TestID   -> "ProjectInstallLocation-Antigravity@@Tests/InstallMCPServer.wlt:447,1-456,2"
 ]
 
 VerificationTest[
@@ -3073,14 +3073,14 @@ VerificationTest[
 
 VerificationTest[
     Length @ $SupportedMCPClients,
-    19,
+    18,
     SameTest -> Equal,
-    TestID   -> "SupportedMCPClients-Has19Clients@@Tests/InstallMCPServer.wlt:2991,1-2996,2"
+    TestID   -> "SupportedMCPClients-Has18Clients@@Tests/InstallMCPServer.wlt:2991,1-2996,2"
 ]
 
 VerificationTest[
     Keys @ $SupportedMCPClients,
-    { "AmazonQ", "Antigravity", "AntigravityCLI", "AugmentCode", "AugmentCodeIDE", "ClaudeCode", "ClaudeDesktop", "Cline", "Codex", "CopilotCLI", "Cursor", "GeminiCLI", "Goose", "Junie", "Kiro", "OpenCode", "VisualStudioCode", "Windsurf", "Zed" },
+    { "AmazonQ", "Antigravity", "AugmentCode", "AugmentCodeIDE", "ClaudeCode", "ClaudeDesktop", "Cline", "Codex", "CopilotCLI", "Cursor", "GeminiCLI", "Goose", "Junie", "Kiro", "OpenCode", "VisualStudioCode", "Windsurf", "Zed" },
     SameTest -> Equal,
     TestID   -> "SupportedMCPClients-KeysSorted@@Tests/InstallMCPServer.wlt:2998,1-3003,2"
 ]
