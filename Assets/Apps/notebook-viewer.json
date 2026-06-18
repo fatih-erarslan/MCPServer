@@ -2,7 +2,8 @@
     "ui": {
         "csp": {
             "connectDomains": [
-                "https://www.wolframcloud.com"
+                "https://www.wolframcloud.com",
+                "data:"
             ],
             "resourceDomains": [
                 "https://unpkg.com",
