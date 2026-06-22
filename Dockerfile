@@ -40,6 +40,9 @@ COPY PacletInfo.wl .
 # Copy kernel implementation
 COPY --chown=wolframengine:wolframengine Kernel/ Kernel/
 
+# Create empty FrontEnd/ dir
+RUN mkdir -p FrontEnd
+
 # Copy startup scripts
 COPY Scripts/Common.wl Scripts/
 COPY Scripts/StartMCPServer.wls Scripts/
