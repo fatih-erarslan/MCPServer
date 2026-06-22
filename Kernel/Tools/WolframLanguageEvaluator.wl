@@ -539,13 +539,16 @@ initializePacletInLocalKernel // endDefinition;
 $sessionIDLetters    := $sessionIDLetters    = Join[ CharacterRange[ "a", "z" ], CharacterRange[ "A", "Z" ] ];
 $sessionIDCharacters := $sessionIDCharacters = Join[ $sessionIDLetters, CharacterRange[ "0", "9" ] ];
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*createSessionID*)
 createSessionID // beginDefinition;
 (* First character is a letter so the ID is a valid context component; 8 chars total. *)
 createSessionID[ ] := StringJoin[ RandomChoice[ $sessionIDLetters ], RandomChoice[ $sessionIDCharacters, 7 ] ];
 createSessionID // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
-(* ::Subsection::Closed:: *)
+(* ::Subsubsection::Closed:: *)
 (*validSessionIDQ*)
 (* Guards "Sessions`" <> id <> "`" against backtick / space / path injection: must start with a letter,
    contain only word characters, and be of bounded length. *)
@@ -557,10 +560,17 @@ validSessionIDQ // endDefinition;
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
 (*Session Paths*)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*sessionsPath*)
 sessionsPath // beginDefinition;
 sessionsPath[ ] := fileNameJoin @ { $rootPath, "Sessions" };
 sessionsPath // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*sessionFile*)
 sessionFile // beginDefinition;
 sessionFile[ id_String ] := fileNameJoin @ { sessionsPath[ ], id <> ".mx" };
 sessionFile // endDefinition;
@@ -572,11 +582,11 @@ sessionFile // endDefinition;
    the eval kernel's $Line; the outer functions update the MCP-side $currentSessionID and the file-scoped
    $line that drives the "Line" option passed to WolframLanguageToolEvaluate. *)
 
-(* :!CodeAnalysis::BeginBlock:: *)
-(* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
-(* :!CodeAnalysis::Disable::PrivateContextSymbol:: *)
-
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*startSession*)
 startSession // beginDefinition;
+
 startSession[ id_String ] := Enclose[
     Module[ { line },
         line = ConfirmMatch[ useEvaluatorKernel @ startSessionInKernel @ id, _Integer, "Seed" ];
@@ -586,9 +596,15 @@ startSession[ id_String ] := Enclose[
     ],
     throwInternalFailure
 ];
+
 startSession // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*startSessionInKernel*)
 startSessionInKernel // beginDefinition;
+(* :!CodeAnalysis::BeginBlock:: *)
+(* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
 startSessionInKernel[ id_String ] := (
     $Context        = "Sessions`" <> id <> "`";
     $ContextPath    = { $Context, "System`" };
@@ -602,31 +618,44 @@ startSessionInKernel[ id_String ] := (
     $Line = 1; (* seed 1 -> first label Out[1]=, matching the original $line origin *)
     $Line
 );
+(* :!CodeAnalysis::EndBlock:: *)
 startSessionInKernel // endDefinition;
 
-
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*enterSessionContext*)
 (* Re-point the eval kernel at an already-live session's context (used when continuing the current
    session). Unlike startSession it does NOT reset In/Out/$Line: the continuing session's history and
    the file-scoped $line counter persist between calls. *)
 enterSessionContext // beginDefinition;
+
 enterSessionContext[ id_String ] := Enclose[
     ConfirmMatch[ useEvaluatorKernel @ enterSessionContextInKernel @ id, Null, "Entered" ];
     id,
     throwInternalFailure
 ];
+
 enterSessionContext // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*enterSessionContextInKernel*)
 enterSessionContextInKernel // beginDefinition;
+
 enterSessionContextInKernel[ id_String ] := (
     $Context        = "Sessions`" <> id <> "`";
     $ContextPath    = { $Context, "System`" };
     $ContextAliases = <| |>;
     Null
 );
+
 enterSessionContextInKernel // endDefinition;
 
-
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*saveSession*)
 saveSession // beginDefinition;
+
 saveSession[ id_String ] := Enclose[
     Module[ { dir, file },
         dir  = ConfirmBy[ ensureDirectory @ sessionsPath[ ], directoryQ, "Directory" ];
@@ -637,9 +666,15 @@ saveSession[ id_String ] := Enclose[
     ],
     throwInternalFailure
 ];
+
 saveSession // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*saveSessionInKernel*)
 saveSessionInKernel // beginDefinition;
+(* :!CodeAnalysis::BeginBlock:: *)
+(* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
 saveSessionInKernel[ id_String, path_String ] :=
     Module[ { tmp },
         $sessionInfo = <|
@@ -661,10 +696,14 @@ saveSessionInKernel[ id_String, path_String ] :=
         RenameFile[ tmp, path, OverwriteTarget -> True ]; (* atomic-ish: never leave a half-written .mx *)
         True
     ];
+(* :!CodeAnalysis::EndBlock:: *)
 saveSessionInKernel // endDefinition;
 
-
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*resumeSession*)
 resumeSession // beginDefinition;
+
 resumeSession[ id_String ] := Enclose[
     Module[ { file, seed },
         file = ConfirmBy[ sessionFile @ id, fileQ, "File" ];
@@ -680,9 +719,15 @@ resumeSession[ id_String ] := Enclose[
     ],
     throwInternalFailure
 ];
+
 resumeSession // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*resumeSessionInKernel*)
 resumeSessionInKernel // beginDefinition;
+(* :!CodeAnalysis::BeginBlock:: *)
+(* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
 resumeSessionInKernel[ path_String ] :=
     Module[ { info },
         $sessionInfo = $Failed; (* clear stale so a failed Get is detectable *)
@@ -704,17 +749,22 @@ resumeSessionInKernel[ path_String ] :=
             $Failed
         ]
     ];
-resumeSessionInKernel // endDefinition;
-
 (* :!CodeAnalysis::EndBlock:: *)
+resumeSessionInKernel // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
 (*Session Cleanup*)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*cleanupSessions*)
 (* Prune oldest-first by age, then count, then total byte budget. The current session's file is always
    retained, so it is excluded from the candidate set (and from the limits). *)
 cleanupSessions // beginDefinition;
+
 cleanupSessions[ ] := cleanupSessions[ $maxSessionCount, $maxSessionBytes, $maxSessionAge ];
+
 cleanupSessions[ maxCount_, maxBytes_, maxAge_ ] :=
     Catch @ Module[ { dir, all, files, dated, cutoff, old, keep, byCount, bySize, toDelete },
         dir = First @ sessionsPath[ ];
@@ -735,8 +785,12 @@ cleanupSessions[ maxCount_, maxBytes_, maxAge_ ] :=
         toDelete = Union[ old, byCount, bySize ];
         If[ toDelete =!= { }, Quiet[ DeleteFile /@ toDelete ] ];
     ];
+
 cleanupSessions // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*toAgeCutoff*)
 toAgeCutoff // beginDefinition;
 toAgeCutoff[ q_Quantity ]      := Now - q;
 toAgeCutoff[ s_String ]        := With[ { q = Quiet @ Quantity @ s }, If[ QuantityQ @ q, Now - q, None ] ];
@@ -745,7 +799,11 @@ toAgeCutoff[ None | Infinity ] := None;
 toAgeCutoff[ _ ]               := None;
 toAgeCutoff // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*sessionsOverByteBudget*)
 sessionsOverByteBudget // beginDefinition;
+
 sessionsOverByteBudget[ _List, max_ ] /; ! IntegerQ @ max := { };
 sessionsOverByteBudget[ files_List, max_Integer ] :=
     Module[ { sizes, acc, drop },
@@ -761,6 +819,7 @@ sessionsOverByteBudget[ files_List, max_Integer ] :=
         ];
         drop
     ];
+
 sessionsOverByteBudget // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
@@ -772,55 +831,89 @@ sessionsOverByteBudget // endDefinition;
    In/Out/$Line history persist in the kernel between calls); a different existing session is resumed
    from disk; an unknown ID starts a fresh session reusing that ID. The outgoing session is not saved
    here on a switch because every call already saves its session at the end (see withSession). *)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*applySession*)
 applySession // beginDefinition;
-applySession[ _Missing | None ]                     := ( $sessionStatus = "new"; startSessionSafe @ createSessionID[ ] );
-applySession[ id_String ] /; ! validSessionIDQ @ id := ( $sessionStatus = "new"; startSessionSafe @ createSessionID[ ] );
+
+applySession[ _Missing | None ] := (
+    $sessionStatus = "new";
+    startSessionSafe @ createSessionID[ ]
+);
+
+applySession[ id_String ] /; ! validSessionIDQ @ id := (
+    $sessionStatus = "new";
+    startSessionSafe @ createSessionID[ ]
+);
+
 applySession[ id_String ] :=
     Which[
         id === $currentSessionID,
-            $sessionStatus = "continued"; enterSessionContextSafe @ id,
+            $sessionStatus = "continued";
+            enterSessionContextSafe @ id,
+
         FileExistsQ @ First @ sessionFile @ id,
-            $sessionStatus = "resumed"; resumeSessionSafe @ id,
+            $sessionStatus = "resumed";
+            resumeSessionSafe @ id,
+
         True,
-            $sessionStatus = "reused"; startSessionSafe @ id
+            $sessionStatus = "reused";
+            startSessionSafe @ id
     ];
+
 applySession // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsubsection::Closed:: *)
-(*Swallow-safe wrappers*)
+(*startSessionSafe*)
 (* Session bookkeeping must never abort the user's evaluation result. catchAlways contains any throw even
    inside the outer catchTop; Quiet suppresses incidental DumpSave/Get messages. *)
 startSessionSafe // beginDefinition;
+
 startSessionSafe[ id_String ] :=
     Replace[
         Quiet @ catchAlways @ startSession @ id,
-        Except[ _String ] :> ( $currentSessionID = id; $line = 1; id )
+        Except[ _String ] :> ($currentSessionID = id; $line = 1; id)
     ];
+
 startSessionSafe // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*resumeSessionSafe*)
 resumeSessionSafe // beginDefinition;
+
 resumeSessionSafe[ id_String ] :=
     Replace[
         Quiet @ catchAlways @ resumeSession @ id,
         Except[ _String ] :> ( $sessionStatus = "reused"; startSessionSafe @ id )
     ];
+
 resumeSessionSafe // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*enterSessionContextSafe*)
 enterSessionContextSafe // beginDefinition;
+
 enterSessionContextSafe[ id_String ] :=
     Replace[
         Quiet @ catchAlways @ enterSessionContext @ id,
         Except[ _String ] :> startSessionSafe @ id
     ];
+
 enterSessionContextSafe // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*saveSessionSafe*)
 saveSessionSafe // beginDefinition;
-saveSessionSafe[ id_String ] := (Quiet @ catchAlways @ saveSession @ id;);
+saveSessionSafe[ id_String ] := Quiet @ catchAlways @ saveSession @ id;
 saveSessionSafe // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
-(* ::Subsection::Closed:: *)
+(* ::Subsubsection::Closed:: *)
 (*withSession*)
 (* Single choke point wrapping both eval paths: set up the session, evaluate, save, then append the
    session info. HoldRest defers the evaluation until the session is active. Internal`InheritedBlock
@@ -831,6 +924,7 @@ saveSessionSafe // endDefinition;
    kernel is never left in a session context between calls. *)
 withSession // beginDefinition;
 withSession // Attributes = { HoldRest };
+
 withSession[ session_, eval_ ] :=
     Internal`InheritedBlock[ { $Context, $ContextPath, $ContextAliases },
         Module[ { id, result },
@@ -840,33 +934,48 @@ withSession[ session_, eval_ ] :=
             appendSessionInfo[ result, id ]
         ]
     ];
+
 withSession // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
-(* ::Subsection::Closed:: *)
+(* ::Subsubsection::Closed:: *)
 (*appendSessionInfo*)
 appendSessionInfo // beginDefinition;
+
 appendSessionInfo[ as_Association, id_String ] /; KeyExistsQ[ as, "Content" ] :=
     Append[ as, "Content" -> Append[ as[ "Content" ], sessionInfoContentItem @ id ] ];
-appendSessionInfo[ str_String, id_String ] := str <> sessionInfoText @ id;
-appendSessionInfo[ other_, id_String ] :=
-    <| "Content" -> { <| "type" -> "text", "text" -> ToString @ other |>, sessionInfoContentItem @ id } |>;
+
+appendSessionInfo[ str_String, id_String ] :=
+    str <> sessionInfoText @ id;
+
+appendSessionInfo[ other_, id_String ] := <|
+    "Content" -> {
+        <| "type" -> "text", "text" -> ToString @ other |>,
+        sessionInfoContentItem @ id
+    }
+|>;
+
 appendSessionInfo // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*sessionInfoContentItem*)
 sessionInfoContentItem // beginDefinition;
 sessionInfoContentItem[ id_String ] := <| "type" -> "text", "text" -> sessionInfoText @ id |>;
 sessionInfoContentItem // endDefinition;
 
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*sessionInfoText*)
 sessionInfoText // beginDefinition;
+
 sessionInfoText[ id_String ] := StringJoin[
     "\n\n<system-reminder>Wolfram session ID: ", id, ".",
-    If[ $sessionStatus === "reused",
-        " (No saved state was found for this ID, so a new empty session was started.)",
-        ""
-    ],
+    If[ $sessionStatus === "reused", " (No saved state was found for this ID, so a new empty session was started.)", "" ],
     " To continue this session (its definitions, line numbers, and history) in your next call to this tool, pass session=\"", id,
     "\". Omit the session parameter only to start a new, empty session.</system-reminder>"
 ];
+
 sessionInfoText // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
