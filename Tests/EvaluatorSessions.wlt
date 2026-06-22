@@ -279,6 +279,25 @@ VerificationTest[
 
 (* ::**************************************************************************************************************:: *)
 (* ::Section::Closed:: *)
+(*syncEvalKernelLine*)
+(* For in-process methods the "Line" option already drives the In/Out label, so syncEvalKernelLine is a
+   no-op (it only does work for the "Local" method, which runs the user's code in a separate subkernel). *)
+VerificationTest[
+    Block[ { Wolfram`AgentTools`Common`$toolOptions = <| |> }, (* Method defaults to "Session" *)
+        Wolfram`AgentTools`Tools`WolframLanguageEvaluator`Private`syncEvalKernelLine[ 5 ]
+    ],
+    Null,
+    TestID -> "SyncEvalKernelLine-NoOpForInProcess@@Tests/EvaluatorSessions.wlt:285,1-291,2"
+]
+
+VerificationTest[
+    Wolfram`AgentTools`Tools`WolframLanguageEvaluator`Private`syncEvalKernelLineSafe[ "not an integer" ],
+    Null,
+    TestID -> "SyncEvalKernelLineSafe-IgnoresNonInteger@@Tests/EvaluatorSessions.wlt:293,1-297,2"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Section::Closed:: *)
 (*Integration: end-to-end session behavior*)
 (* These invoke the real tool (non-UI path), redirecting session storage to a temporary root so the
    user's real Sessions directory is untouched. $currentSessionID is reset per test for determinism. *)
@@ -302,7 +321,7 @@ VerificationTest[
         StringContainsQ[ extractToolText @ r3, "42" ]
     ],
     True,
-    TestID -> "Integration-SessionIsolation@@Tests/EvaluatorSessions.wlt:287,1-306,2"
+    TestID -> "Integration-SessionIsolation@@Tests/EvaluatorSessions.wlt:306,1-325,2"
 ]
 
 (* Re-passing the same session ID continues it: definitions persist and line numbers advance. *)
@@ -324,7 +343,7 @@ VerificationTest[
         StringContainsQ[ text, "6" ] && StringContainsQ[ text, "Out[2]" ]
     ],
     True,
-    TestID -> "Integration-ContinueSamePersistsAndAdvancesLine@@Tests/EvaluatorSessions.wlt:309,1-328,2"
+    TestID -> "Integration-ContinueSamePersistsAndAdvancesLine@@Tests/EvaluatorSessions.wlt:328,1-347,2"
 ]
 
 (* A session resumes from disk after its in-kernel symbols are gone (simulated server restart). *)
@@ -348,7 +367,7 @@ VerificationTest[
         StringContainsQ[ extractToolText @ r2, "99" ]
     ],
     True,
-    TestID -> "Integration-RestartResumeFromDisk@@Tests/EvaluatorSessions.wlt:331,1-352,2"
+    TestID -> "Integration-RestartResumeFromDisk@@Tests/EvaluatorSessions.wlt:350,1-371,2"
 ]
 
 (* Every result echoes the session ID with resume instructions. *)
@@ -368,7 +387,7 @@ VerificationTest[
         StringContainsQ[ extractToolText @ r, "session=\"AppendSess\"" ]
     ],
     True,
-    TestID -> "Integration-AppendsSessionInfo@@Tests/EvaluatorSessions.wlt:355,1-372,2"
+    TestID -> "Integration-AppendsSessionInfo@@Tests/EvaluatorSessions.wlt:374,1-391,2"
 ]
 
 (* A fresh session's first evaluation is labeled Out[1]. *)
@@ -388,7 +407,32 @@ VerificationTest[
         StringContainsQ[ extractToolText @ r, "Out[1]" ]
     ],
     True,
-    TestID -> "Integration-FreshSessionStartsAtLineOne@@Tests/EvaluatorSessions.wlt:375,1-392,2"
+    TestID -> "Integration-FreshSessionStartsAtLineOne@@Tests/EvaluatorSessions.wlt:394,1-411,2"
+]
+
+(* Resuming a session continues its line numbering rather than resetting it: A reaches Out[2], B
+   intervenes (so A is no longer the current session), then resuming A is labeled Out[3]. Regression
+   test for the cross-session line-number bug. *)
+VerificationTest[
+    Module[ { root, tool, r },
+        root = FileNameJoin @ { $TemporaryDirectory, "AgentToolsSess_" <> CreateUUID[ ] };
+        tool = $DefaultMCPTools[ "WolframLanguageEvaluator" ];
+        Block[
+            {
+                Wolfram`AgentTools`Common`$rootPath          = root,
+                Wolfram`AgentTools`Common`$clientSupportsUI  = False,
+                Wolfram`AgentTools`Tools`WolframLanguageEvaluator`Private`$currentSessionID = None
+            },
+            tool[ <| "code" -> "11", "session" -> "ResumeLineA" |> ]; (* Out[1] *)
+            tool[ <| "code" -> "22", "session" -> "ResumeLineA" |> ]; (* Out[2] *)
+            tool[ <| "code" -> "33", "session" -> "ResumeLineB" |> ]; (* B intervenes; A no longer current *)
+            r = tool[ <| "code" -> "44", "session" -> "ResumeLineA" |> ] (* resume A -> Out[3] *)
+        ];
+        Quiet @ DeleteDirectory[ root, DeleteContents -> True ];
+        StringContainsQ[ extractToolText @ r, "Out[3]" ]
+    ],
+    True,
+    TestID -> "Integration-ResumeContinuesLineNumbering@@Tests/EvaluatorSessions.wlt:416,1-436,2"
 ]
 
 (* An unknown / expired session ID starts a fresh session reusing that ID and says so. *)
@@ -408,7 +452,7 @@ VerificationTest[
         StringContainsQ[ text, "NeverSavedXyz" ] && StringContainsQ[ text, "No saved state" ]
     ],
     True,
-    TestID -> "Integration-UnknownIdReusedFresh@@Tests/EvaluatorSessions.wlt:395,1-412,2"
+    TestID -> "Integration-UnknownIdReusedFresh@@Tests/EvaluatorSessions.wlt:439,1-456,2"
 ]
 
 (* :!CodeAnalysis::EndBlock:: *)

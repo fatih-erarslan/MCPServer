@@ -441,6 +441,7 @@ useEvaluatorKernel // endDefinition;
 (* :!CodeAnalysis::Disable::PrivateContextSymbol:: *)
 
 evaluateInLocalKernel // beginDefinition;
+evaluateInLocalKernel // Attributes = { HoldAllComplete };
 
 evaluateInLocalKernel[ eval_ ] :=
     Block[ (* FIXME: Expose this as an option in WolframLanguageToolEvaluate *)
@@ -527,11 +528,17 @@ initializePacletInLocalKernel // endDefinition;
 (* ::Section::Closed:: *)
 (*Sessions*)
 (* Each conversation gets an isolated, resumable evaluation session, keyed by an opaque ID supplied by
-   the AI via the "session" parameter. A session is simulated with a per-session $Context plus saved /
-   restored $Line and In/Out/InString/MessageList history, and persisted to disk so it survives server
-   restarts. Works for both "Session" (in-process) and "Local" (separate kernel) methods: the session-
-   defining mutations and the disk read/write run through useEvaluatorKernel so they execute in whichever
-   kernel evaluates the user's code. *)
+   the AI via the "session" parameter. Isolation comes from a per-session $Context: the session functions
+   run via useEvaluatorKernel and point the controlling kernel's $Context at "Sessions`<id>`", so the
+   user's code parses into that context (and, under the "Local" method, the resulting fully qualified
+   symbols then evaluate in that context inside the eval subkernel). State is persisted to disk so sessions
+   survive server restarts.
+
+   Line numbering is owned by the file-scoped $line: the authoritative per-session counter, persisted in
+   the session payload and passed as the "Line" option. Under the in-process "Session" method that option
+   drives the In/Out label directly. Under "Local" the user's code runs in a persistent subkernel whose own
+   $Line produces the label and the option does not reach it, so syncEvalKernelLine pushes $line into that
+   subkernel's $Line at each session boundary, after which the two advance in lockstep. *)
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
@@ -578,9 +585,11 @@ sessionFile // endDefinition;
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
 (*Starting, Saving, and Resuming Sessions*)
-(* The *InKernel companions run inside useEvaluatorKernel (so they execute in the eval kernel) and return
-   the eval kernel's $Line; the outer functions update the MCP-side $currentSessionID and the file-scoped
-   $line that drives the "Line" option passed to WolframLanguageToolEvaluate. *)
+(* The *InKernel companions set up the kernel-side session state ($Context, In/Out history, $Line) via
+   useEvaluatorKernel and return the line seed; the outer functions update the MCP-side $currentSessionID
+   and the file-scoped $line. Note that under the "Local" method useEvaluatorKernel runs these in the
+   controlling kernel (which is what points its $Context at the session so the user's code parses into it);
+   the user's code itself runs in the eval subkernel, whose $Line is set separately via syncEvalKernelLine. *)
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsubsection::Closed:: *)
@@ -653,6 +662,37 @@ enterSessionContextInKernel // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsubsection::Closed:: *)
+(*syncEvalKernelLine*)
+(* Push the session's line counter into the eval kernel's $Line. Only needed for the "Local" method: there
+   the user's code runs in a persistent subkernel whose own $Line produces the In/Out label, and the "Line"
+   option does not reach it. (For in-process methods the "Line" option drives the label directly, so this
+   is a no-op.) Routed through evaluateInLocalKernel0 so it targets the subkernel; its $Line-- rollback
+   cancels the main-loop increment, leaving $Line set to exactly the next user line. Called at session
+   boundaries (see withSession); within a session the subkernel's $Line then advances in lockstep with
+   $line. *)
+syncEvalKernelLine // beginDefinition;
+(* :!CodeAnalysis::BeginBlock:: *)
+(* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
+(* :!CodeAnalysis::Disable::PrivateContextSymbol:: *)
+syncEvalKernelLine[ line_Integer ] /; $evaluatorMethod === "Local" :=
+    Block[ { Wolfram`Chatbook`Sandbox`Private`$includeDefinitions = False },
+        With[ { n = line }, evaluateInLocalKernel0[ $Line = n ] ]
+    ];
+(* :!CodeAnalysis::EndBlock:: *)
+syncEvalKernelLine[ _Integer ] := Null;
+syncEvalKernelLine // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*syncEvalKernelLineSafe*)
+(* Line bookkeeping must never abort the user's evaluation result (mirrors startSessionSafe et al.). *)
+syncEvalKernelLineSafe // beginDefinition;
+syncEvalKernelLineSafe[ line_Integer ] := Quiet @ catchAlways @ syncEvalKernelLine @ line;
+syncEvalKernelLineSafe[ _ ] := Null;
+syncEvalKernelLineSafe // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
 (*saveSession*)
 saveSession // beginDefinition;
 
@@ -681,7 +721,8 @@ saveSessionInKernel[ id_String, path_String ] :=
             "$Context"        -> $Context,
             "$ContextPath"    -> $ContextPath,
             "$ContextAliases" -> $ContextAliases,
-            "$Line"           -> $Line,
+            "$Line"           -> $Line, (* eval kernel's $Line, kept for reference / back-compat *)
+            "$line"           -> $line, (* authoritative per-session counter that drives resume *)
             "In"              -> DownValues[ In ],
             "InString"        -> DownValues[ InString ],
             "Out"             -> DownValues[ Out ],
@@ -729,22 +770,25 @@ resumeSessionInKernel // beginDefinition;
 (* :!CodeAnalysis::BeginBlock:: *)
 (* :!CodeAnalysis::Disable::SuspiciousSessionSymbol:: *)
 resumeSessionInKernel[ path_String ] :=
-    Module[ { info },
+    Module[ { info, line },
         $sessionInfo = $Failed; (* clear stale so a failed Get is detectable *)
         Quiet @ Get @ path;
         info = $sessionInfo;
         If[ AssociationQ @ info,
+            (* "$line" is the authoritative per-session counter; fall back to the kernel "$Line" for
+               sessions written before it was persisted. *)
+            line            = Replace[ info[ "$line" ], Except[ _Integer ] :> info[ "$Line" ] ];
             $Context        = info[ "$Context" ];
             $ContextPath    = info[ "$ContextPath" ];
             $ContextAliases = info[ "$ContextAliases" ];
-            $Line           = info[ "$Line" ];
+            $Line           = line;
             Unprotect[ In, InString, Out, MessageList ];
             DownValues[ In ]          = info[ "In" ];
             DownValues[ InString ]    = info[ "InString" ];
             DownValues[ Out ]         = info[ "Out" ];
             DownValues[ MessageList ] = info[ "MessageList" ];
             Protect[ In, InString, Out, MessageList ];
-            $Line,
+            line,
             (* else: malformed payload *)
             $Failed
         ]
@@ -928,7 +972,11 @@ withSession // Attributes = { HoldRest };
 withSession[ session_, eval_ ] :=
     Internal`InheritedBlock[ { $Context, $ContextPath, $ContextAliases },
         Module[ { id, result },
-            id     = applySession @ session;
+            id = applySession @ session;
+            (* applySession has set $line and the session $Context. For the "Local" method also push $line
+               into the eval subkernel's $Line at a boundary (a continued session already tracks it in
+               lockstep); no-op for in-process methods. *)
+            If[ $sessionStatus =!= "continued", syncEvalKernelLineSafe @ $line ];
             result = eval;
             saveSessionSafe @ id;
             appendSessionInfo[ result, id ]
