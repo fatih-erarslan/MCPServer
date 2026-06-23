@@ -213,6 +213,12 @@ Notes:
 
 When `cn` is correctly reading the local file, its header changes from `Config: Default Config` to `Config: <name from your config.yaml>`, and the Wolfram MCP server appears under **MCP Servers** with status `connected`.
 
+**Project scope is supported by Continue's IDE extensions only.** Continue's VS Code extension and JetBrains plugin auto-discover MCP server block files in `<workspace>/.continue/mcpServers/`, but as of `cn` v1.5.47 the standalone CLI does **not** auto-discover them — even when launched from inside the project directory. `cn` only reads the global `~/.continue/config.yaml` by default. Verified by writing a uniquely-named project-scope server (`InstallMCPServer[{"Continue", dir}, "WolframLanguage", "MCPServerName" -> "WolframProjectTest"]`) and observing that `cn` launched from `dir` shows the global Wolfram entry but not the project-scope `WolframProjectTest` entry. If you're a CLI-only user and want a per-project Wolfram server, either:
+
+- Install at global scope (`InstallMCPServer["Continue", "WolframLanguage"]`) and rely on `cn`'s existing config, or
+- Point `cn` explicitly at the project block file: `cn --config "C:\path\to\project\.continue\mcpServers\wolfram.yaml"` (Windows) / `cn --config ./.continue/mcpServers/wolfram.yaml` (macOS / Linux), or
+- Use the `/config` slash command inside `cn` to switch to the project file at runtime.
+
 ### Copilot CLI
 
 | Scope | Config Location |

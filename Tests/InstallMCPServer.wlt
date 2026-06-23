@@ -3532,11 +3532,7 @@ VerificationTest[
     Length @ $SupportedMCPClients,
     19,
     SameTest -> Equal,
-<<<<<<< HEAD
     TestID   -> "SupportedMCPClients-Has19Clients@@Tests/InstallMCPServer.wlt:2991,1-2996,2"
-=======
-    TestID   -> "SupportedMCPClients-Has18Clients@@Tests/InstallMCPServer.wlt:3067,1-3072,2"
->>>>>>> main
 ]
 
 VerificationTest[
