@@ -461,8 +461,9 @@ VerificationTest[
 (*LLMKit Enablement*)
 
 (* llmKitEnabledQ reads the LLMKIT_ENABLED environment variable, which "EnableLLMKit" -> False sets
-   to "false" in the MCP config's env block. It mirrors mcpAppsEnabledQ: only a "false" value
-   (case-insensitive) disables LLMKit; any other value, or an unset variable, leaves it enabled. *)
+   to "false" in the MCP config's env block. The value is interpreted as a Boolean: only a value that
+   reads as False (e.g. "false"/"no"/"0", case-insensitive) disables LLMKit; an unset variable, or any
+   value that does not interpret as False (including non-boolean strings), leaves it enabled. *)
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
@@ -477,7 +478,7 @@ VerificationTest[
     },
     { "set", $Failed },
     SameTest -> SameQ,
-    TestID   -> "EnvironmentBlock-SetsAndRestores@@Tests/Utilities.wlt:473,1-481,2"
+    TestID   -> "EnvironmentBlock-SetsAndRestores@@Tests/Utilities.wlt:474,1-482,2"
 ]
 
 (* ::**************************************************************************************************************:: *)
@@ -489,7 +490,7 @@ VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> None, Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     True,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-NotSet@@Tests/Utilities.wlt:488,1-493,2"
+    TestID   -> "LLMKitEnabledQ-NotSet@@Tests/Utilities.wlt:489,1-494,2"
 ]
 
 (* Disabled when the variable is "false" *)
@@ -497,7 +498,7 @@ VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> "false", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     False,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-FalseLowercase@@Tests/Utilities.wlt:496,1-501,2"
+    TestID   -> "LLMKitEnabledQ-FalseLowercase@@Tests/Utilities.wlt:497,1-502,2"
 ]
 
 (* The check is case-insensitive *)
@@ -505,14 +506,14 @@ VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> "False", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     False,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-FalseMixedCase@@Tests/Utilities.wlt:504,1-509,2"
+    TestID   -> "LLMKitEnabledQ-FalseMixedCase@@Tests/Utilities.wlt:505,1-510,2"
 ]
 
 VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> "FALSE", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     False,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-FalseUppercase@@Tests/Utilities.wlt:511,1-516,2"
+    TestID   -> "LLMKitEnabledQ-FalseUppercase@@Tests/Utilities.wlt:512,1-517,2"
 ]
 
 (* Any other value leaves LLMKit enabled *)
@@ -520,14 +521,37 @@ VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> "true", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     True,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-TrueString@@Tests/Utilities.wlt:519,1-524,2"
+    TestID   -> "LLMKitEnabledQ-TrueString@@Tests/Utilities.wlt:520,1-525,2"
 ]
 
 VerificationTest[
     environmentBlock[ "LLMKIT_ENABLED" -> "1", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
     True,
     SameTest -> Equal,
-    TestID   -> "LLMKitEnabledQ-OneString@@Tests/Utilities.wlt:526,1-531,2"
+    TestID   -> "LLMKitEnabledQ-OneString@@Tests/Utilities.wlt:527,1-532,2"
+]
+
+(* A value that reads as boolean False also disables LLMKit *)
+VerificationTest[
+    environmentBlock[ "LLMKIT_ENABLED" -> "0", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
+    False,
+    SameTest -> Equal,
+    TestID   -> "LLMKitEnabledQ-ZeroDisables@@Tests/Utilities.wlt:535,1-540,2"
+]
+
+VerificationTest[
+    environmentBlock[ "LLMKIT_ENABLED" -> "no", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
+    False,
+    SameTest -> Equal,
+    TestID   -> "LLMKitEnabledQ-NoDisables@@Tests/Utilities.wlt:542,1-547,2"
+]
+
+(* A value that does not interpret as a Boolean leaves LLMKit enabled *)
+VerificationTest[
+    environmentBlock[ "LLMKIT_ENABLED" -> "maybe", Wolfram`AgentTools`Common`llmKitEnabledQ[ ] ],
+    True,
+    SameTest -> Equal,
+    TestID   -> "LLMKitEnabledQ-NonBooleanEnabled@@Tests/Utilities.wlt:550,1-555,2"
 ]
 
 (* ::**************************************************************************************************************:: *)
@@ -553,5 +577,5 @@ VerificationTest[
     ],
     { False, False },
     SameTest -> SameQ,
-    TestID   -> "LLMKitSubscribedQ-DisabledShortCircuits@@Tests/Utilities.wlt:541,1-557,2"
+    TestID   -> "LLMKitSubscribedQ-DisabledShortCircuits@@Tests/Utilities.wlt:565,1-581,2"
 ]

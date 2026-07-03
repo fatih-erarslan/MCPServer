@@ -28,15 +28,15 @@ llmKitSubscribedQ // endDefinition;
 (*llmKitEnabledQ*)
 
 (* Runtime check for the LLMKIT_ENABLED environment variable, which "EnableLLMKit" -> False sets to
-   "false" in the MCP config's env block. Mirrors mcpAppsEnabledQ: any value other than "false"
-   (case-insensitive), including an unset variable, leaves LLMKit enabled. When disabled, the context
-   tools behave as if the user has no LLMKit subscription, but without emitting subscription warnings. *)
+   "false" in the MCP config's env block. The value is interpreted as a Boolean: only a value that reads
+   as False (e.g. "false"/"no"/"0", case-insensitive) disables LLMKit; an unset variable, or any value
+   that does not interpret as False (including non-boolean strings like "maybe"), leaves it enabled. When
+   disabled, the context tools behave as if the user has no LLMKit subscription, but without emitting
+   subscription warnings. *)
 llmKitEnabledQ // beginDefinition;
 
 llmKitEnabledQ[ ] :=
-    With[ { val = Environment[ "LLMKIT_ENABLED" ] },
-        ! StringQ[ val ] || ! StringMatchQ[ val, "false", IgnoreCase -> True ]
-    ];
+    Interpreter[ "Boolean" ][ Environment[ "LLMKIT_ENABLED" ] ] =!= False;
 
 llmKitEnabledQ // endDefinition;
 
