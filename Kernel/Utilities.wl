@@ -13,11 +13,32 @@ Needs[ "Wolfram`AgentTools`Common`" ];
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
 (*llmKitSubscribedQ*)
+(* The no-argument form additionally requires LLMKit to be enabled for this session
+   (see llmKitEnabledQ). When disabled via "EnableLLMKit" -> False, this returns False and
+   short-circuits before getLLMKitInfo[], so the context tools behave as though the user has
+   no subscription without any cloud lookup or subscription warning. *)
 llmKitSubscribedQ // beginDefinition;
-llmKitSubscribedQ[ ] := llmKitSubscribedQ @ getLLMKitInfo[ ];
+llmKitSubscribedQ[ ] := llmKitEnabledQ[ ] && llmKitSubscribedQ @ getLLMKitInfo[ ];
 llmKitSubscribedQ[ KeyValuePattern[ "userHasSubscription" -> bool: True|False ] ] := bool;
 llmKitSubscribedQ[ _ ] := False;
 llmKitSubscribedQ // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
+(*llmKitEnabledQ*)
+
+(* Runtime check for the LLMKIT_ENABLED environment variable, which "EnableLLMKit" -> False sets to
+   "false" in the MCP config's env block. Mirrors mcpAppsEnabledQ: any value other than "false"
+   (case-insensitive), including an unset variable, leaves LLMKit enabled. When disabled, the context
+   tools behave as if the user has no LLMKit subscription, but without emitting subscription warnings. *)
+llmKitEnabledQ // beginDefinition;
+
+llmKitEnabledQ[ ] :=
+    With[ { val = Environment[ "LLMKIT_ENABLED" ] },
+        ! StringQ[ val ] || ! StringMatchQ[ val, "false", IgnoreCase -> True ]
+    ];
+
+llmKitEnabledQ // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
