@@ -40,6 +40,7 @@ BeginPackage[ "Wolfram`AgentTools`Common`" ];
 `getWolframCommand;
 `importResourceFunction;
 `initializeVectorDatabases;
+`llmKitEnabledQ;
 `llmKitSubscribedQ;
 `llmKitUsageLimitFailureQ;
 `llmKitUsageLimitMessage;
