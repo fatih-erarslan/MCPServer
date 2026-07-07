@@ -917,6 +917,13 @@ evaluateTool[ msg_, req_ ] := Enclose[
             toolResultAssoc[ "_meta" ] = result[ "_meta" ]
         ];
 
+        (* Also forward structuredContent: the MCP Apps spec routes it to the app without
+           adding it to model context. Claude Desktop currently drops it (ext-apps#696),
+           so the app falls back to text/image until that is fixed. *)
+        If[ AssociationQ @ result && AssociationQ @ result[ "StructuredContent" ],
+            toolResultAssoc[ "structuredContent" ] = result[ "StructuredContent" ]
+        ];
+
         toolResultAssoc
     ],
     throwInternalFailure

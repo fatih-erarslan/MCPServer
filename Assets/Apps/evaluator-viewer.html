@@ -105,6 +105,36 @@
     (function() {
         "use strict";
 
+        // ---- Debug logging ----
+        // Prefixed so it can be filtered in the console (search "evaluator-viewer").
+        // Added to diagnose WolframNotebookEmbedder failures under newer hosts.
+        var LOG_PREFIX = "[evaluator-viewer]";
+        function log() {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift(LOG_PREFIX);
+            console.log.apply(console, a);
+        }
+        function logError() {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift(LOG_PREFIX);
+            console.error.apply(console, a);
+        }
+
+        // Surface failures the host console might otherwise hide: uncaught
+        // exceptions, rejected promises, and CSP blocks (a likely cause of the
+        // CDN script or wolframcloud.com iframe failing to load in newer hosts).
+        window.addEventListener("error", function(e) {
+            logError("window error:", e.message, "@",
+                (e.filename || "?") + ":" + e.lineno + ":" + e.colno, e.error || "");
+        });
+        window.addEventListener("unhandledrejection", function(e) {
+            logError("unhandled promise rejection:", e.reason);
+        });
+        document.addEventListener("securitypolicyviolation", function(e) {
+            logError("CSP violation:", e.violatedDirective, "blocked", e.blockedURI,
+                "| policy:", e.originalPolicy);
+        });
+
         // ---- State ----
         var nextId = 1;
         var pending = {};
@@ -115,8 +145,14 @@
             var script = document.createElement("script");
             script.src = "https://unpkg.com/wolfram-notebook-embedder@0.3/dist/wolfram-notebook-embedder.min.js";
             script.crossOrigin = "";
-            script.onload = resolve;
-            script.onerror = function() {
+            log("loading WolframNotebookEmbedder from", script.src);
+            script.onload = function() {
+                log("WolframNotebookEmbedder script loaded; global available:",
+                    typeof WolframNotebookEmbedder !== "undefined");
+                resolve();
+            };
+            script.onerror = function(e) {
+                logError("failed to load WolframNotebookEmbedder from CDN:", script.src, e);
                 reject(new Error("Failed to load WolframNotebookEmbedder library from CDN."));
             };
             document.head.appendChild(script);
@@ -147,8 +183,11 @@
             loadingEl.style.display = "none";
         }
 
-        // ---- Find notebookUrl in top-level _meta or content items ----
-        function findNotebookUrl(content, meta) {
+        // ---- Find notebookUrl in structuredContent, top-level _meta, or content items ----
+        // structuredContent is the spec's UI-only channel (kept out of model context);
+        // _meta is the fallback for spec-compliant hosts and direct tools/call responses.
+        function findNotebookUrl(content, meta, structured) {
+            if (structured && structured.notebookUrl) return structured.notebookUrl;
             if (meta && meta.notebookUrl) return meta.notebookUrl;
             if (!content || !Array.isArray(content)) return null;
             for (var i = 0; i < content.length; i++) {
@@ -175,17 +214,40 @@
             resultsEl.innerHTML = "";
             loadingEl.style.display = "flex";
 
+            var target = url.startsWith("http") ? url : { expr: url };
+            log("embedNotebook: url =", url, "| target =", target);
+
+            // Watchdog: if embed() neither resolves nor rejects, nothing hits the
+            // console. Warn so a blocked iframe / network stall is visible.
+            var settled = false;
+            var watchdog = setTimeout(function() {
+                if (!settled) {
+                    logError("embedNotebook: embed() still pending after 20s for", url,
+                        "- possible blocked wolframcloud.com iframe or network stall");
+                }
+            }, 20000);
+
             embedderLoaded.then(function() {
-                return WolframNotebookEmbedder.embed((url.startsWith("http") ? url : {expr: url}), notebookContainer, {
+                if (typeof WolframNotebookEmbedder === "undefined" || !WolframNotebookEmbedder.embed) {
+                    throw new Error("WolframNotebookEmbedder.embed is unavailable after load");
+                }
+                log("embedNotebook: calling WolframNotebookEmbedder.embed()");
+                return WolframNotebookEmbedder.embed(target, notebookContainer, {
                     allowInteract: true,
                     showRenderProgress: true,
                     width: null,
                     maxHeight: Infinity
                 });
             }).then(function(nb) {
+                settled = true;
+                clearTimeout(watchdog);
+                log("embedNotebook: embed succeeded");
                 embedded = nb;
                 loadingEl.style.display = "none";
             }).catch(function(err) {
+                settled = true;
+                clearTimeout(watchdog);
+                logError("embedNotebook: embed failed for", url, "->", err);
                 loadingEl.style.display = "none";
             });
         }
@@ -246,12 +308,16 @@
         }
 
         // ---- Handle tool result: try notebook embed, or fall back to text+image ----
-        function handleToolResult(content, meta) {
-            var notebookUrl = findNotebookUrl(content, meta);
+        function handleToolResult(content, meta, structured) {
+            var notebookUrl = findNotebookUrl(content, meta, structured);
+            log("handleToolResult: notebookUrl =", notebookUrl, "| meta =", meta,
+                "| structuredContent =", structured,
+                "| content items =", Array.isArray(content) ? content.length : content);
 
             if (notebookUrl) {
                 embedNotebook(notebookUrl);
             } else {
+                log("handleToolResult: no notebookUrl; rendering text/image fallback");
                 detachNotebook();
                 renderContent(content);
             }
@@ -364,9 +430,10 @@
 
                 case "ui/notifications/tool-result":
                     hideLoading();
+                    log("ui/notifications/tool-result: msg =", msg);
                     var params = msg.params || {};
                     if (params.content && Array.isArray(params.content)) {
-                        handleToolResult(params.content, params._meta);
+                        handleToolResult(params.content, params._meta, params.structuredContent);
                     } else if (params.text) {
                         renderPlainText(params.text);
                     }
@@ -408,12 +475,14 @@
                 tools: { listChanged: false }
             }
         }).then(function(result) {
+            log("ui/initialize succeeded; host result:", result);
             sendNotification("ui/notifications/initialized");
             setupAutoResize();
             if (result) {
                 applyTheme(result.hostContext || result.context || result);
             }
         }).catch(function(err) {
+            logError("ui/initialize failed:", err);
             showError("Failed to initialize: " + ((err && err.message) || String(err)));
         });
     })();
