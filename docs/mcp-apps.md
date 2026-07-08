@@ -97,6 +97,22 @@ Inline embedding is **experimental and not yet the default**. Both methods curre
 
 When inline embedding is active, graphics can render empty in the embedded notebook. The `delayedDisplay` helper works around this for `WolframLanguageEvaluator` output: any output boxes containing `GraphicsBox`/`Graphics3DBox` are serialized and reconstructed asynchronously inside a `DynamicModule` (showing a progress indicator until ready). Outside inline mode, or for output without graphics, `delayedDisplay` returns the boxes unchanged.
 
+### Recovering the Notebook URL When `_meta` Is Dropped
+
+The `notebookUrl` is delivered to the app through `_meta` and `structuredContent` (per the MCP Apps spec), both of which are meant to reach the app without entering model context. Some hosts, however, drop both from tool results ([ext-apps#696](https://github.com/modelcontextprotocol/ext-apps/issues/696)), so the app never receives the URL directly and can only render the text/image fallback.
+
+To recover in that case, `makeNotebookUIResult` also appends an opaque marker to the (non-dropped) text content of cloud-notebook results:
+
+```
+<nbid>56a24661be6b3368</nbid>
+```
+
+The hex value is the deployed notebook's base file name. The marker is intentionally cryptic so the model ignores it, and every viewer strips it (via `stripAgentOnlyText`) before rendering.
+
+When a viewer receives a result with no `notebookUrl`, it extracts this id and issues a `resources/read` for `ui://wolfram/notebook-url/<hexId>`. The host forwards the read to the server (the MCP Apps spec permits apps to read any resource URI), and `readNotebookURLResource` reconstructs the full cloud URL from the id — statelessly, since a `CloudObject` URL is derived locally from the base name and the user's cloud path. Unlike `_meta`, a resource's text payload is not stripped, so the URL reaches the app, which then embeds the notebook as usual.
+
+This path applies only to cloud delivery: inline notebooks (`MCP_APPS_NOTEBOOK_METHOD="Inline"`) have no reconstructable id, so no marker is appended and `_meta`/`structuredContent` remains their only route. The `notebook-viewer` app normally receives its URL through the tool **input** (`arguments.url`), which is unaffected by the dropped-`_meta` issue; it applies the same recovery only as a fallback when a result arrives without a prior embed.
+
 ## Available UI Resources
 
 | URI | HTML Asset | Description |
@@ -231,12 +247,13 @@ Add tests in `Tests/` for the new resource. See the existing test files (`Tests/
 | `$toolUIAssociations` | `Common` | Mapping of tool names to UI resource URIs (entries may be `RuleDelayed` to gate on `$deployCloudNotebooks`) |
 | `$deployCloudNotebooks` | `Common` | Session flag gating cloud notebook deployment; initialized from `$CloudConnected` and set to `False` after a deployment failure |
 | `deployCloudNotebookForMCPApp` | `Common` | Shared helper that delivers a notebook for a UI-enhanced tool result — deploys to the cloud and returns a URL, or returns the serialized notebook when `MCP_APPS_NOTEBOOK_METHOD` is `"Inline"`; disables `$deployCloudNotebooks` on a deploy failure |
+| `makeNotebookUIResult` | `Common` | Builds the UI-enhanced tool result from the text content and the delivered notebook value: carries `notebookUrl` in `_meta`/`structuredContent`, and appends the opaque `<nbid>` marker for cloud URLs (the dropped-`_meta` workaround); returns `$Failed` when deployment failed |
 | `delayedDisplay` | `Common` | Wraps `WolframLanguageEvaluator` output boxes so graphics reconstruct asynchronously when notebooks are embedded inline; a no-op outside inline mode or for graphics-free output |
 | `clientSupportsUIQ` | `Common` | Checks if an `initialize` message advertises UI support |
 | `mcpAppsEnabledQ` | `Common` | Checks the `MCP_APPS_ENABLED` environment variable |
 | `initializeUIResources` | `Common` | Loads HTML assets into the resource registry |
 | `listUIResources` | `Common` | Returns the resource list for `resources/list` |
-| `readUIResource` | `Common` | Handles `resources/read` requests |
+| `readUIResource` | `Common` | Handles `resources/read` requests: registered HTML app resources, and `ui://wolfram/notebook-url/<hexId>` lookups that reconstruct a cloud notebook URL (the dropped-`_meta` workaround) |
 | `toolUIMetadata` | `Common` | Returns `_meta.ui` for a tool name |
 | `withToolUIMetadata` | `Common` | Augments a tool list with UI metadata |
 
