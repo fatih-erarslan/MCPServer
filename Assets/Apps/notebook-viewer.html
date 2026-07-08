@@ -297,14 +297,23 @@
         // to use. (This viewer renders no text, so there is nothing to strip from the display.)
         function extractNotebookUrlMarker(content) {
             if (!content || !Array.isArray(content)) return null;
+            // Prefer the LAST marker in document order. The server appends its marker as the
+            // final content item (see appendNotebookURLMarker), so the last marker is the
+            // trusted one; scanning for the last match rather than the first keeps a marker
+            // injected earlier via user-controlled tool output text from overriding the
+            // server-appended URL (even if a host concatenates the text items).
+            var re = /<internal>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/internal>/g;
+            var url = null;
             for (var i = 0; i < content.length; i++) {
                 var item = content[i];
                 if (item && item.type === "text" && typeof item.text === "string") {
-                    var m = item.text.match(/<internal>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/internal>/);
-                    if (m && m[1].trim()) return m[1].trim();
+                    var m;
+                    while ((m = re.exec(item.text)) !== null) {
+                        if (m[1].trim()) url = m[1].trim();
+                    }
                 }
             }
-            return null;
+            return url;
         }
 
         // ---- Recover and embed a notebook from a tool result ----
