@@ -139,6 +139,9 @@
         var nextId = 1;
         var pending = {};
         var embedded = null;
+        // Bumped on every embedNotebook() call so a stale embed that resolves
+        // after a newer result can be discarded instead of clobbering it.
+        var embedGeneration = 0;
 
         // ---- Load WolframNotebookEmbedder dynamically ----
         var embedderLoaded = new Promise(function(resolve, reject) {
@@ -235,9 +238,13 @@
         // ---- Embed a cloud notebook ----
         function embedNotebook(url) {
             detachNotebook();
-            resultsEl.innerHTML = "";
+            // Do NOT clear resultsEl here: any text/image fallback rendered by
+            // handleToolResult must stay visible until the embed actually
+            // succeeds, so an embed failure (CSP, CDN, blocked iframe, network
+            // stall) still leaves readable output on screen.
             loadingEl.style.display = "flex";
 
+            var generation = ++embedGeneration;
             var isHttpUrl = typeof url === "string" && url.startsWith("http");
             var target = isHttpUrl ? url : { expr: url };
             log("embedNotebook: target =", describeUrl(url));
@@ -266,12 +273,23 @@
             }).then(function(nb) {
                 settled = true;
                 clearTimeout(watchdog);
+                if (generation !== embedGeneration) {
+                    // A newer result superseded this embed; discard it so it
+                    // can't clear the current fallback or steal `embedded`.
+                    if (nb && nb.detach) nb.detach();
+                    return;
+                }
                 log("embedNotebook: embed succeeded");
                 embedded = nb;
+                // Notebook is on screen now; drop the redundant text/image fallback.
+                resultsEl.innerHTML = "";
                 loadingEl.style.display = "none";
             }).catch(function(err) {
                 settled = true;
                 clearTimeout(watchdog);
+                if (generation !== embedGeneration) return;
+                // Embed failed; leave the text/image fallback rendered by
+                // handleToolResult in place so the user still sees output.
                 logError("embedNotebook: embed failed for", describeUrl(url), "->", err);
                 loadingEl.style.display = "none";
             });
@@ -341,6 +359,10 @@
                 "| content =", describe(content));
 
             if (notebookUrl) {
+                // Render the text/image fallback first so a failed embed still
+                // leaves readable output; embedNotebook() clears it again once
+                // the notebook actually renders.
+                renderContent(content);
                 embedNotebook(notebookUrl);
             } else {
                 log("handleToolResult: no notebookUrl; rendering text/image fallback");
