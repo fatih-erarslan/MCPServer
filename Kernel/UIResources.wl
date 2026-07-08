@@ -81,6 +81,62 @@ deployCloudNotebookForMCPApp // endDefinition;
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
+(*makeNotebookUIResult*)
+(* Builds the UI-enhanced tool result for a deployed notebook. The notebookUrl is carried in
+   _meta and structuredContent (per the MCP Apps spec) so it reaches the app without entering
+   model context. Because some hosts drop both (ext-apps#696) and also do not forward
+   app-initiated resources/read, we additionally append the URL to the (non-dropped) text
+   content inside an <internal>...<url>...</url></internal> marker. The wrapper text tells the
+   model the notebook is already shown and the URL is not for it to use; each viewer extracts
+   the URL and strips the whole marker before rendering. *)
+makeNotebookUIResult // beginDefinition;
+
+makeNotebookUIResult[ textContent_List, deployed_String ] := <|
+    "Content"           -> appendNotebookURLMarker[ textContent, deployed ],
+    "_meta"             -> <| "notebookUrl" -> deployed |>,
+    "StructuredContent" -> <| "notebookUrl" -> deployed |>
+|>;
+
+(* Deployment failed (deployCloudNotebookForMCPApp returned $Failed): no UI result. *)
+makeNotebookUIResult[ _List, _ ] := $Failed;
+
+makeNotebookUIResult // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*appendNotebookURLMarker*)
+appendNotebookURLMarker // beginDefinition;
+
+(* Only cloud URLs are embedded this way. Inline notebooks (MCP_APPS_NOTEBOOK_METHOD="Inline")
+   carry the whole serialized notebook as the value and are delivered via _meta/structuredContent
+   only, never embedded in the content. *)
+appendNotebookURLMarker[ textContent_List, url_String ] /; StringStartsQ[ url, "http" ] :=
+    Append[ textContent, <| "type" -> "text", "text" -> notebookURLMarkerText[ url ] |> ];
+
+appendNotebookURLMarker[ textContent_List, _ ] := textContent;
+
+appendNotebookURLMarker // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*notebookURLMarkerText*)
+(* Wraps the URL in an instruction the model can read (so it ignores the URL) and in <url> tags
+   the viewer matches. The format lives here on the WL side; the viewers' extraction and strip
+   regexes must stay in sync with these tags. *)
+notebookURLMarkerText // beginDefinition;
+
+notebookURLMarkerText[ url_String ] := StringJoin[
+    "<internal>",
+    "This tool call was displayed to the user as an interactive notebook, which they can already see. ",
+    "The URL below only renders that notebook; you do not need to read, repeat, visit, or otherwise use it. ",
+    "<url>", url, "</url>",
+    "</internal>"
+];
+
+notebookURLMarkerText // endDefinition;
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
 (*delayedDisplay*)
 (* This is a workaround for plots showing up empty when embedding an inline notebook expression instead of a URL *)
 delayedDisplay // beginDefinition;

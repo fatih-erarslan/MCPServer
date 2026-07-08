@@ -143,18 +143,11 @@ makeUIResult[ as_, KeyValuePattern[ { "Result" -> waResult_, "String" -> stringR
             "Deployed"
         ];
 
-        If[ StringQ @ deployed,
-            (* Carry notebookUrl in _meta (per the MCP Apps spec) and in structuredContent.
-               Both are meant to reach the app without entering model context; some hosts
-               drop _meta but honor structuredContent. Claude Desktop currently drops both
-               (ext-apps#696) and falls back to text/image until that is fixed. *)
-            <|
-                "Content"           -> textContent,
-                "_meta"             -> <| "notebookUrl" -> deployed |>,
-                "StructuredContent" -> <| "notebookUrl" -> deployed |>
-            |>,
-            $Failed
-        ]
+        (* Build the UI result: notebookUrl in _meta/structuredContent (per the MCP Apps spec),
+           plus the URL inside an <internal>...<url>...</url></internal> marker in the content as
+           a fallback for hosts that drop both (ext-apps#696). See makeNotebookUIResult. Returns
+           $Failed if deployment failed. *)
+        makeNotebookUIResult[ textContent, deployed ]
     ],
     throwInternalFailure
 ];

@@ -1264,6 +1264,94 @@ VerificationTest[
 
 (* ::**************************************************************************************************************:: *)
 (* ::Subsection::Closed:: *)
+(*makeNotebookUIResult*)
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*Cloud URL Appends URL Marker*)
+VerificationTest[
+    Module[ { url, result, marker },
+        url    = "https://www.wolframcloud.com/obj/user/AgentTools/Notebooks/deadbeef12345678.nb";
+        result = Wolfram`AgentTools`Common`makeNotebookUIResult[
+            { <| "type" -> "text", "text" -> "1 + 1 = 2" |> },
+            url
+        ];
+        marker = Last[ result[ "Content" ] ][ "text" ];
+        {
+            Length @ result[ "Content" ],
+            StringContainsQ[ marker, "<internal>" ] && StringContainsQ[ marker, "</internal>" ],
+            StringContainsQ[ marker, "<url>" <> url <> "</url>" ],
+            result[ "_meta", "notebookUrl" ],
+            result[ "StructuredContent", "notebookUrl" ]
+        }
+    ],
+    {
+        2,
+        True,
+        True,
+        "https://www.wolframcloud.com/obj/user/AgentTools/Notebooks/deadbeef12345678.nb",
+        "https://www.wolframcloud.com/obj/user/AgentTools/Notebooks/deadbeef12345678.nb"
+    },
+    SameTest -> MatchQ,
+    TestID   -> "MakeNotebookUIResult-CloudURLAppendsMarker"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*Marker URL Is Extractable*)
+(* Mirrors the viewers' extraction: the URL must sit inside <url>...</url> within the marker so
+   the client regex <internal>...<url>(...)</url>...</internal> can recover it. *)
+VerificationTest[
+    Module[ { url, marker },
+        url    = "https://www.wolframcloud.com/obj/u/AgentTools/Notebooks/deadbeef12345678.nb";
+        marker = Wolfram`AgentTools`UIResources`Private`notebookURLMarkerText[ url ];
+        First[
+            StringCases[ marker, "<internal>" ~~ ___ ~~ "<url>" ~~ u: Except[ "<" ].. ~~ "</url>" ~~ ___ ~~ "</internal>" :> u ],
+            None
+        ]
+    ],
+    "https://www.wolframcloud.com/obj/u/AgentTools/Notebooks/deadbeef12345678.nb",
+    SameTest -> MatchQ,
+    TestID   -> "NotebookURLMarkerText-URLIsExtractable"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*Deployment Failure Returns $Failed*)
+VerificationTest[
+    Wolfram`AgentTools`Common`makeNotebookUIResult[
+        { <| "type" -> "text", "text" -> "x" |> },
+        $Failed
+    ],
+    $Failed,
+    SameTest -> MatchQ,
+    TestID   -> "MakeNotebookUIResult-DeployFailed"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsubsection::Closed:: *)
+(*Inline (Non-http) Value Omits Marker*)
+(* Inline notebooks have no reconstructable id, so no marker is appended; the value is still
+   carried in _meta/structuredContent for spec-compliant hosts. *)
+VerificationTest[
+    Module[ { serialized, result },
+        serialized = "Notebook[{Cell[\"1 + 1\", \"Input\"]}]";
+        result     = Wolfram`AgentTools`Common`makeNotebookUIResult[
+            { <| "type" -> "text", "text" -> "x" |> },
+            serialized
+        ];
+        { result[ "Content" ], result[ "_meta", "notebookUrl" ] }
+    ],
+    {
+        { <| "type" -> "text", "text" -> "x" |> },
+        "Notebook[{Cell[\"1 + 1\", \"Input\"]}]"
+    },
+    SameTest -> MatchQ,
+    TestID   -> "MakeNotebookUIResult-InlineNoMarker"
+]
+
+(* ::**************************************************************************************************************:: *)
+(* ::Subsection::Closed:: *)
 (*delayedDisplay*)
 
 (* ::**************************************************************************************************************:: *)

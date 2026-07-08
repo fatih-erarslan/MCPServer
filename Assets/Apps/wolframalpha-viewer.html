@@ -275,7 +275,7 @@
             clearBtn.style.display = queryInput.value ? "flex" : "none";
         }
 
-        // ---- Find notebookUrl in structuredContent, top-level _meta, or content items ----
+        // ---- Find notebookUrl in structuredContent, _meta, content items, or content marker ----
         function findNotebookUrl(content, meta, structured) {
             // structuredContent is the spec's UI-only channel (kept out of model context)
             if (structured && structured.notebookUrl) return structured.notebookUrl;
@@ -288,7 +288,46 @@
                     return item._meta.notebookUrl;
                 }
             }
-            return null;
+            // Host dropped _meta/structuredContent (ext-apps#696): recover from the marker.
+            return extractNotebookUrlMarker(content);
+        }
+
+        // ---- Recover the URL from the <internal>...<url>...</url></internal> content marker ----
+        // Fallback for hosts that drop _meta/structuredContent (ext-apps#696). The marker's
+        // wrapper text tells the model the notebook is already shown and the URL is not for it
+        // to use; stripAgentOnlyText removes the whole marker before anything reaches the user.
+        function extractNotebookUrlMarker(content) {
+            if (!content || !Array.isArray(content)) return null;
+            // Prefer the LAST marker in document order. The server appends its marker as the
+            // final content item (see appendNotebookURLMarker), so the last marker is the
+            // trusted one; scanning for the last match rather than the first keeps a marker
+            // injected earlier via user-controlled tool output text from overriding the
+            // server-appended URL (even if a host concatenates the text items).
+            var re = /<internal>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/internal>/g;
+            var url = null;
+            for (var i = 0; i < content.length; i++) {
+                var item = content[i];
+                if (item && item.type === "text" && typeof item.text === "string") {
+                    var m;
+                    while ((m = re.exec(item.text)) !== null) {
+                        if (m[1].trim()) url = m[1].trim();
+                    }
+                }
+            }
+            return url;
+        }
+
+        // ---- Strip text intended only for the AI, not the user ----
+        // The tool result may carry an <internal>...</internal> marker (see
+        // extractNotebookUrlMarker) that must never be surfaced in the widget. The other
+        // patterns match hints some hosts inject, kept in sync with the evaluator viewer.
+        function stripAgentOnlyText(text) {
+            if (!text) return "";
+            return text
+                .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "")
+                .replace(/\[This tool call rendered an interactive widget[\s\S]*?\]/g, "")
+                .replace(/<internal>[\s\S]*?<\/internal>/g, "")
+                .trim();
         }
 
         // ---- Detach previous notebook ----
@@ -398,9 +437,11 @@
                 if (item._meta && (!item.text || item.text === "")) continue;
 
                 if (item.type === "text" && item.text) {
+                    var text = stripAgentOnlyText(item.text);
+                    if (!text) continue;
                     var div = document.createElement("div");
                     div.className = "result-text";
-                    div.textContent = item.text;
+                    div.textContent = text;
                     resultsEl.appendChild(div);
                 } else if (item.type === "image" && item.data && item.mimeType) {
                     var imgDiv = document.createElement("div");
@@ -416,10 +457,11 @@
 
         function renderPlainText(text) {
             resultsEl.innerHTML = "";
-            if (!text) return;
+            var clean = stripAgentOnlyText(text);
+            if (!clean) return;
             var div = document.createElement("div");
             div.className = "result-text";
-            div.textContent = text;
+            div.textContent = clean;
             resultsEl.appendChild(div);
         }
 
@@ -441,9 +483,9 @@
                 renderContent(content);
                 embedNotebook(notebookUrl);
             } else {
-                // No notebookUrl (e.g. the host dropped _meta/structuredContent):
-                // fall back to the text/image content the result still carries,
-                // and only show an error when there is nothing renderable.
+                // No notebookUrl (e.g. the host dropped _meta/structuredContent and the result
+                // carries no marker): fall back to the text/image content the result still
+                // carries, and only show an error when there is nothing renderable.
                 detachNotebook();
                 renderContent(content);
                 if (!resultsEl.children.length) {

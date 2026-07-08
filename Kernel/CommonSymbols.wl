@@ -135,6 +135,7 @@ BeginPackage[ "Wolfram`AgentTools`Common`" ];
 `initializeUIResources;
 `listUIResources;
 `loadUIResource;
+`makeNotebookUIResult;
 `readUIResource;
 `toolUIMetadata;
 `withToolUIMetadata;

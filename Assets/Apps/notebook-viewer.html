@@ -115,6 +115,9 @@
         var nextId = 1;
         var pending = {};
         var embedded = null;
+        // Whether an embed has been initiated (from tool-input, normally). Guards the
+        // tool-result fallback below against embedding the same notebook twice.
+        var embedRequested = false;
 
         // ---- Load WolframNotebookEmbedder dynamically ----
         var embedderLoaded = new Promise(function(resolve, reject) {
@@ -274,6 +277,58 @@
             });
         }
 
+        // ---- Find notebookUrl in structuredContent, _meta, content items, or content marker ----
+        function findNotebookUrl(content, meta, structured) {
+            if (structured && structured.notebookUrl) return structured.notebookUrl;
+            if (meta && meta.notebookUrl) return meta.notebookUrl;
+            if (!content || !Array.isArray(content)) return null;
+            for (var i = 0; i < content.length; i++) {
+                var item = content[i];
+                if (item && item._meta && item._meta.notebookUrl) {
+                    return item._meta.notebookUrl;
+                }
+            }
+            return extractNotebookUrlMarker(content);
+        }
+
+        // ---- Recover the URL from the <internal>...<url>...</url></internal> content marker ----
+        // Fallback for hosts that drop _meta/structuredContent (ext-apps#696). The marker's
+        // wrapper text tells the model the notebook is already shown and the URL is not for it
+        // to use. (This viewer renders no text, so there is nothing to strip from the display.)
+        function extractNotebookUrlMarker(content) {
+            if (!content || !Array.isArray(content)) return null;
+            // Prefer the LAST marker in document order. The server appends its marker as the
+            // final content item (see appendNotebookURLMarker), so the last marker is the
+            // trusted one; scanning for the last match rather than the first keeps a marker
+            // injected earlier via user-controlled tool output text from overriding the
+            // server-appended URL (even if a host concatenates the text items).
+            var re = /<internal>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/internal>/g;
+            var url = null;
+            for (var i = 0; i < content.length; i++) {
+                var item = content[i];
+                if (item && item.type === "text" && typeof item.text === "string") {
+                    var m;
+                    while ((m = re.exec(item.text)) !== null) {
+                        if (m[1].trim()) url = m[1].trim();
+                    }
+                }
+            }
+            return url;
+        }
+
+        // ---- Recover and embed a notebook from a tool result ----
+        // This viewer normally embeds from tool-input (arguments.url). As a fallback for hosts
+        // that deliver a result but not the input, recover a URL from the result: from
+        // _meta/structuredContent, or from the content marker for hosts that drop those.
+        function recoverNotebookFromResult(params) {
+            if (!params) return;
+            var url = findNotebookUrl(params.content, params._meta, params.structuredContent);
+            if (url) {
+                embedRequested = true;
+                embedNotebook(url);
+            }
+        }
+
         // ---- Incoming message handler ----
         window.addEventListener("message", function(event) {
             if (event.source !== window.parent) return;
@@ -302,6 +357,7 @@
                     var args = (msg.params && msg.params.arguments) || {};
                     var url = args.url;
                     if (url) {
+                        embedRequested = true;
                         embedNotebook(
                             url,
                             args.allowInteract,
@@ -317,11 +373,14 @@
                     break;
 
                 case "ui/notifications/tool-result":
-                    // Notebook is already embedding from tool-input
+                    // Normally the notebook is already embedding from tool-input; recover from
+                    // the result only if no embed has been initiated yet.
+                    if (!embedRequested) recoverNotebookFromResult(msg.params);
                     break;
 
                 case "ui/notifications/tool-cancelled":
                     loadingEl.style.display = "none";
+                    embedRequested = false;
                     if (embedded) {
                         embedded.detach();
                         embedded = null;
@@ -333,6 +392,7 @@
                     break;
 
                 case "ui/resource-teardown":
+                    embedRequested = false;
                     if (embedded) {
                         embedded.detach();
                         embedded = null;
