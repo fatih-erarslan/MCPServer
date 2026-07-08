@@ -220,6 +220,9 @@
         var pending = {};
         var currentQuery = "";
         var embedded = null;
+        // Bumped on every embedNotebook() call so a stale embed that resolves
+        // after a newer result can be discarded instead of clobbering it.
+        var embedGeneration = 0;
 
         // ---- Load WolframNotebookEmbedder dynamically ----
         var embedderLoaded = new Promise(function(resolve, reject) {
@@ -324,9 +327,13 @@
         // ---- Embed a cloud notebook ----
         function embedNotebook(url) {
             detachNotebook();
-            resultsEl.innerHTML = "";
+            // Do NOT clear resultsEl here: any text/image fallback rendered by
+            // handleToolResult must stay visible until the embed actually
+            // succeeds, so an embed failure (CSP, CDN, blocked iframe, network
+            // stall) still leaves readable output on screen.
             loadingEl.style.display = "flex";
 
+            var generation = ++embedGeneration;
             var isHttpUrl = typeof url === "string" && url.startsWith("http");
             var target = isHttpUrl ? url : { expr: url };
             log("embedNotebook: target =", describeUrl(url));
@@ -355,13 +362,23 @@
             }).then(function(nb) {
                 settled = true;
                 clearTimeout(watchdog);
+                if (generation !== embedGeneration) {
+                    // A newer result superseded this embed; discard it so it
+                    // can't clear the current fallback or steal `embedded`.
+                    if (nb && nb.detach) nb.detach();
+                    return;
+                }
                 log("embedNotebook: embed succeeded");
                 embedded = nb;
+                // Notebook is on screen now; drop the redundant text/image fallback.
+                resultsEl.innerHTML = "";
                 loadingEl.style.display = "none";
             }).catch(function(err) {
                 settled = true;
                 clearTimeout(watchdog);
-                // Embedder failed; text+image fallback content is already rendered
+                if (generation !== embedGeneration) return;
+                // Embed failed; the text/image fallback rendered by
+                // handleToolResult is still on screen, so the user sees output.
                 logError("embedNotebook: embed failed for", describeUrl(url), "->", err);
                 loadingEl.style.display = "none";
             });
@@ -406,7 +423,7 @@
             resultsEl.appendChild(div);
         }
 
-        // ---- Handle tool result: try notebook embed, or show error ----
+        // ---- Handle tool result: embed notebook, falling back to text/image ----
         function handleToolResult(content, meta, structured) {
             var notebookUrl = findNotebookUrl(content, meta, structured);
             log("handleToolResult: notebookUrl =", describeUrl(notebookUrl),
@@ -414,13 +431,25 @@
                 "| structuredContent =", describe(structured),
                 "| content =", describe(content));
 
+            // A fresh result supersedes any stale error banner.
+            clearError();
+
             if (notebookUrl) {
+                // Render the text/image fallback first so a failed embed still
+                // leaves readable output; embedNotebook() clears it again once
+                // the notebook actually renders.
+                renderContent(content);
                 embedNotebook(notebookUrl);
             } else {
-                // No notebook URL: show error instead of raw text
-                logError("handleToolResult: no notebookUrl in result; content =", describe(content));
+                // No notebookUrl (e.g. the host dropped _meta/structuredContent):
+                // fall back to the text/image content the result still carries,
+                // and only show an error when there is nothing renderable.
                 detachNotebook();
-                showError("Unable to load notebook. Click Go to retry.");
+                renderContent(content);
+                if (!resultsEl.children.length) {
+                    logError("handleToolResult: no notebookUrl and no renderable content =", describe(content));
+                    showError("Unable to load notebook. Click Go to retry.");
+                }
             }
         }
 
