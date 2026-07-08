@@ -185,20 +185,59 @@
     (function() {
         "use strict";
 
+        // ---- Debug logging ----
+        // Prefixed so it can be filtered in the console (search "wolframalpha-viewer").
+        // Added to diagnose WolframNotebookEmbedder failures under newer hosts.
+        var LOG_PREFIX = "[wolframalpha-viewer]";
+        function log() {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift(LOG_PREFIX);
+            console.log.apply(console, a);
+        }
+        function logError() {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift(LOG_PREFIX);
+            console.error.apply(console, a);
+        }
+
+        // Surface failures the host console might otherwise hide: uncaught
+        // exceptions, rejected promises, and CSP blocks (a likely cause of the
+        // CDN script or wolframcloud.com iframe failing to load in newer hosts).
+        window.addEventListener("error", function(e) {
+            logError("window error:", e.message, "@",
+                (e.filename || "?") + ":" + e.lineno + ":" + e.colno, e.error || "");
+        });
+        window.addEventListener("unhandledrejection", function(e) {
+            logError("unhandled promise rejection:", e.reason);
+        });
+        document.addEventListener("securitypolicyviolation", function(e) {
+            logError("CSP violation:", e.violatedDirective, "blocked", e.blockedURI,
+                "| policy:", e.originalPolicy);
+        });
+
         // ---- State ----
         var nextId = 1;
         var pending = {};
         var currentQuery = "";
         var embedded = null;
+        // Bumped on every embedNotebook() call so a stale embed that resolves
+        // after a newer result can be discarded instead of clobbering it.
+        var embedGeneration = 0;
 
         // ---- Load WolframNotebookEmbedder dynamically ----
         var embedderLoaded = new Promise(function(resolve, reject) {
             var script = document.createElement("script");
             script.src = "https://unpkg.com/wolfram-notebook-embedder@0.3/dist/wolfram-notebook-embedder.min.js";
             script.crossOrigin = "";
-            script.onload = resolve;
-            script.onerror = function() {
+            log("loading WolframNotebookEmbedder from", script.src);
+            script.onload = function() {
+                log("WolframNotebookEmbedder script loaded; global available:",
+                    typeof WolframNotebookEmbedder !== "undefined");
+                resolve();
+            };
+            script.onerror = function(e) {
                 // Non-fatal: embedder is optional; text+image fallback still works
+                logError("failed to load WolframNotebookEmbedder from CDN:", script.src, e);
                 reject(new Error("Failed to load WolframNotebookEmbedder library from CDN."));
             };
             document.head.appendChild(script);
@@ -236,11 +275,12 @@
             clearBtn.style.display = queryInput.value ? "flex" : "none";
         }
 
-        // ---- Find notebookUrl in top-level _meta or content items ----
-        function findNotebookUrl(content, meta) {
-            // Check top-level _meta first (from tool-result notification)
+        // ---- Find notebookUrl in structuredContent, top-level _meta, or content items ----
+        function findNotebookUrl(content, meta, structured) {
+            // structuredContent is the spec's UI-only channel (kept out of model context)
+            if (structured && structured.notebookUrl) return structured.notebookUrl;
+            // _meta works on direct tools/call responses
             if (meta && meta.notebookUrl) return meta.notebookUrl;
-            // Fall back to checking content items (from tools/call response)
             if (!content || !Array.isArray(content)) return null;
             for (var i = 0; i < content.length; i++) {
                 var item = content[i];
@@ -260,25 +300,87 @@
             notebookContainer.innerHTML = "";
         }
 
+        // ---- Summarize a notebook target for logging ----
+        // Inline delivery (MCP_APPS_NOTEBOOK_METHOD="Inline") passes the entire
+        // serialized notebook as `url`; logging it verbatim floods the console and
+        // can leak notebook content into host-collected logs, so report only size.
+        function describeUrl(url) {
+            if (typeof url !== "string") return "(non-string: " + (url === null ? "null" : typeof url) + ")";
+            return url.startsWith("http") ? url : "(inline notebook, " + url.length + " chars)";
+        }
+
+        // ---- Summarize an arbitrary value for logging ----
+        // object -> its keys, array -> its item types, anything else -> its type.
+        // Never logs values, so large or sensitive payloads (inline notebooks,
+        // base64 image data) carried in meta/structuredContent/content can't flood
+        // the console or leak into host-collected logs.
+        function describe(value) {
+            if (Array.isArray(value)) {
+                return value.map(function(item) {
+                    return item && item.type ? item.type : describe(item);
+                });
+            }
+            if (value && typeof value === "object") return Object.keys(value);
+            return value === null ? "null" : typeof value;
+        }
+
         // ---- Embed a cloud notebook ----
         function embedNotebook(url) {
             detachNotebook();
-            resultsEl.innerHTML = "";
+            // Do NOT clear resultsEl here: any text/image fallback rendered by
+            // handleToolResult must stay visible until the embed actually
+            // succeeds, so an embed failure (CSP, CDN, blocked iframe, network
+            // stall) still leaves readable output on screen.
             loadingEl.style.display = "flex";
 
+            var generation = ++embedGeneration;
+            var isHttpUrl = typeof url === "string" && url.startsWith("http");
+            var target = isHttpUrl ? url : { expr: url };
+            log("embedNotebook: target =", describeUrl(url));
+
+            // Watchdog: if embed() neither resolves nor rejects, nothing hits the
+            // console. Warn so a blocked iframe / network stall is visible.
+            var settled = false;
+            var watchdog = setTimeout(function() {
+                if (!settled) {
+                    logError("embedNotebook: embed() still pending after 20s for", describeUrl(url),
+                        "- possible blocked wolframcloud.com iframe or network stall");
+                }
+            }, 20000);
+
             embedderLoaded.then(function() {
-                return WolframNotebookEmbedder.embed((url.startsWith("http") ? url : {expr: url}), notebookContainer, {
+                if (typeof WolframNotebookEmbedder === "undefined" || !WolframNotebookEmbedder.embed) {
+                    throw new Error("WolframNotebookEmbedder.embed is unavailable after load");
+                }
+                log("embedNotebook: calling WolframNotebookEmbedder.embed()");
+                return WolframNotebookEmbedder.embed(target, notebookContainer, {
                     allowInteract: true,
                     showRenderProgress: true,
                     width: null,
                     maxHeight: Infinity
                 });
             }).then(function(nb) {
+                settled = true;
+                clearTimeout(watchdog);
+                if (generation !== embedGeneration) {
+                    // A newer result superseded this embed; discard it so it
+                    // can't clear the current fallback or steal `embedded`.
+                    if (nb && nb.detach) nb.detach();
+                    return;
+                }
+                log("embedNotebook: embed succeeded");
                 embedded = nb;
+                // Notebook is on screen now; drop the redundant text/image fallback.
+                resultsEl.innerHTML = "";
                 loadingEl.style.display = "none";
             }).catch(function(err) {
+                settled = true;
+                clearTimeout(watchdog);
+                if (generation !== embedGeneration) return;
+                // Embed failed; the text/image fallback rendered by
+                // handleToolResult is still on screen, so the user sees output.
+                logError("embedNotebook: embed failed for", describeUrl(url), "->", err);
                 loadingEl.style.display = "none";
-                // Embedder failed; text+image fallback content is already rendered
             });
         }
 
@@ -321,16 +423,33 @@
             resultsEl.appendChild(div);
         }
 
-        // ---- Handle tool result: try notebook embed, or show error ----
-        function handleToolResult(content, meta) {
-            var notebookUrl = findNotebookUrl(content, meta);
+        // ---- Handle tool result: embed notebook, falling back to text/image ----
+        function handleToolResult(content, meta, structured) {
+            var notebookUrl = findNotebookUrl(content, meta, structured);
+            log("handleToolResult: notebookUrl =", describeUrl(notebookUrl),
+                "| meta =", describe(meta),
+                "| structuredContent =", describe(structured),
+                "| content =", describe(content));
+
+            // A fresh result supersedes any stale error banner.
+            clearError();
 
             if (notebookUrl) {
+                // Render the text/image fallback first so a failed embed still
+                // leaves readable output; embedNotebook() clears it again once
+                // the notebook actually renders.
+                renderContent(content);
                 embedNotebook(notebookUrl);
             } else {
-                // No notebook URL: show error instead of raw text
+                // No notebookUrl (e.g. the host dropped _meta/structuredContent):
+                // fall back to the text/image content the result still carries,
+                // and only show an error when there is nothing renderable.
                 detachNotebook();
-                showError("Unable to load notebook. Click Go to retry.");
+                renderContent(content);
+                if (!resultsEl.children.length) {
+                    logError("handleToolResult: no notebookUrl and no renderable content =", describe(content));
+                    showError("Unable to load notebook. Click Go to retry.");
+                }
             }
         }
 
@@ -426,13 +545,14 @@
                 hideLoading();
                 goBtn.disabled = false;
                 if (result && result.content) {
-                    handleToolResult(result.content, result._meta);
+                    handleToolResult(result.content, result._meta, result.structuredContent);
                 } else if (result && typeof result === "string") {
                     renderPlainText(result);
                 }
             }).catch(function(err) {
                 hideLoading();
                 goBtn.disabled = false;
+                logError("WolframAlpha tools/call failed:", err);
                 showError("Query failed: " + ((err && err.message) || JSON.stringify(err)));
             });
         }
@@ -506,7 +626,7 @@
                     hideLoading();
                     var params = msg.params || {};
                     if (params.content && Array.isArray(params.content)) {
-                        handleToolResult(params.content, params._meta);
+                        handleToolResult(params.content, params._meta, params.structuredContent);
                     } else if (params.text) {
                         renderPlainText(params.text);
                     }
@@ -548,12 +668,14 @@
                 tools: { listChanged: false }
             }
         }).then(function(result) {
+            log("ui/initialize succeeded; host result:", result);
             sendNotification("ui/notifications/initialized");
             setupAutoResize();
             if (result) {
                 applyTheme(result.hostContext || result.context || result);
             }
         }).catch(function(err) {
+            logError("ui/initialize failed:", err);
             showError("Failed to initialize: " + ((err && err.message) || String(err)));
         });
     })();
