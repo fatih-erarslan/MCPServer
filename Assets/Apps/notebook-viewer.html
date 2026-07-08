@@ -217,13 +217,23 @@
             }
         }
 
+        // ---- Summarize a notebook target for logging ----
+        // Inline delivery (MCP_APPS_NOTEBOOK_METHOD="Inline") passes the entire
+        // serialized notebook as `url`; logging it verbatim floods the console and
+        // can leak notebook content into host-collected logs, so report only size.
+        function describeUrl(url) {
+            if (typeof url !== "string") return "(non-string: " + (url === null ? "null" : typeof url) + ")";
+            return url.startsWith("http") ? url : "(inline notebook, " + url.length + " chars)";
+        }
+
         // ---- Embed notebook ----
         function embedNotebook(url, allowInteract, maxHeight) {
             loadingEl.style.display = "flex";
             errorEl.style.display = "none";
 
-            var target = url.startsWith("http") ? url : { expr: url };
-            log("embedNotebook: url =", url, "| target =", target,
+            var isHttpUrl = typeof url === "string" && url.startsWith("http");
+            var target = isHttpUrl ? url : { expr: url };
+            log("embedNotebook: target =", describeUrl(url),
                 "| allowInteract =", allowInteract, "| maxHeight =", maxHeight);
 
             // Watchdog: if embed() neither resolves nor rejects, nothing hits the
@@ -231,7 +241,7 @@
             var settled = false;
             var watchdog = setTimeout(function() {
                 if (!settled) {
-                    logError("embedNotebook: embed() still pending after 20s for", url,
+                    logError("embedNotebook: embed() still pending after 20s for", describeUrl(url),
                         "- possible blocked wolframcloud.com iframe or network stall");
                 }
             }, 20000);
@@ -258,7 +268,7 @@
             }).catch(function(err) {
                 settled = true;
                 clearTimeout(watchdog);
-                logError("embedNotebook: embed failed for", url, "->", err);
+                logError("embedNotebook: embed failed for", describeUrl(url), "->", err);
                 var msg = (err && err.message) ? err.message : String(err);
                 showError(msg);
             });
