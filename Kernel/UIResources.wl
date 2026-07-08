@@ -108,7 +108,8 @@ makeNotebookUIResult // endDefinition;
 appendNotebookURLMarker // beginDefinition;
 
 (* Only cloud URLs are embedded this way. Inline notebooks (MCP_APPS_NOTEBOOK_METHOD="Inline")
-   carry the whole serialized notebook as the value and are delivered via _meta only. *)
+   carry the whole serialized notebook as the value and are delivered via _meta/structuredContent
+   only, never embedded in the content. *)
 appendNotebookURLMarker[ textContent_List, url_String ] /; StringStartsQ[ url, "http" ] :=
     Append[ textContent, <| "type" -> "text", "text" -> notebookURLMarkerText[ url ] |> ];
 
