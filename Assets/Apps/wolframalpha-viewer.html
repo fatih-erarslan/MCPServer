@@ -479,17 +479,20 @@
         // sizing. http(s) URLs only; inline notebook exprs have no framable URL and
         // never reach here.
         function embedNotebookViaIframe(url, generation) {
+            var iframe = document.createElement("iframe");
+            iframe.src = url;
+            iframe.title = "Wolfram notebook";
+
             var settled = false;
             var watchdog = setTimeout(function() {
-                if (!settled) {
+                // Skip the warning if the iframe is no longer in the document: a newer
+                // embed or teardown removed it on purpose, so it wasn't stuck loading.
+                if (!settled && iframe.isConnected) {
                     logError("embedNotebookViaIframe: iframe still loading after 20s for", url,
                         "- possible blocked wolframcloud.com iframe or network stall");
                 }
             }, 20000);
 
-            var iframe = document.createElement("iframe");
-            iframe.src = url;
-            iframe.title = "Wolfram notebook";
             iframe.addEventListener("load", function() {
                 settled = true;
                 clearTimeout(watchdog);
