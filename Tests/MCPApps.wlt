@@ -1426,33 +1426,33 @@ VerificationTest[
    eval-permitting CSP. These tests guard against silently dropping that fallback. *)
 
 VerificationTest[
-    Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
+    Module[ { html }, Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
         Wolfram`AgentTools`Common`initializeUIResources[ ];
         html = Wolfram`AgentTools`Common`$uiResourceRegistry[ "ui://wolfram/evaluator-viewer", "html" ];
         StringContainsQ[ html, "cspAllowsEval" ] && StringContainsQ[ html, "embedNotebookViaIframe" ]
-    ],
+    ] ],
     True,
     SameTest -> Equal,
     TestID   -> "EvaluatorViewer-EvalCSPFallbackPresent@@Tests/MCPApps.wlt:1428,1-1437,2"
 ]
 
 VerificationTest[
-    Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
+    Module[ { html }, Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
         Wolfram`AgentTools`Common`initializeUIResources[ ];
         html = Wolfram`AgentTools`Common`$uiResourceRegistry[ "ui://wolfram/wolframalpha-viewer", "html" ];
         StringContainsQ[ html, "cspAllowsEval" ] && StringContainsQ[ html, "embedNotebookViaIframe" ]
-    ],
+    ] ],
     True,
     SameTest -> Equal,
     TestID   -> "WolframAlphaViewer-EvalCSPFallbackPresent@@Tests/MCPApps.wlt:1439,1-1448,2"
 ]
 
 VerificationTest[
-    Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
+    Module[ { html }, Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
         Wolfram`AgentTools`Common`initializeUIResources[ ];
         html = Wolfram`AgentTools`Common`$uiResourceRegistry[ "ui://wolfram/notebook-viewer", "html" ];
         StringContainsQ[ html, "cspAllowsEval" ] && StringContainsQ[ html, "embedNotebookViaIframe" ]
-    ],
+    ] ],
     True,
     SameTest -> Equal,
     TestID   -> "NotebookViewer-EvalCSPFallbackPresent@@Tests/MCPApps.wlt:1450,1-1459,2"
