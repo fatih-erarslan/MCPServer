@@ -1477,6 +1477,25 @@ VerificationTest[
     TestID   -> "NotebookViewers-IframeFallbackResizable@@Tests/MCPApps.wlt:1464,1-1478,2"
 ]
 
+(* The resize drag's move/end listeners live on window, so each viewer must scope them to the
+   initiating pointer; otherwise a second finger on a multi-pointer device could resize the
+   frame or end the drag out from under the pointer that started it. *)
+VerificationTest[
+    Block[ { Wolfram`AgentTools`Common`$uiResourceRegistry },
+        Wolfram`AgentTools`Common`initializeUIResources[ ];
+        AllTrue[
+            { "ui://wolfram/evaluator-viewer", "ui://wolfram/wolframalpha-viewer", "ui://wolfram/notebook-viewer" },
+            StringContainsQ[
+                Wolfram`AgentTools`Common`$uiResourceRegistry[ #, "html" ],
+                "ev.pointerId !== activePointerId"
+            ] &
+        ]
+    ],
+    True,
+    SameTest -> Equal,
+    TestID   -> "NotebookViewers-ResizeDragScopedToPointer"
+]
+
 (* The embedder path must remain for hosts whose CSP does permit eval (fit-to-content sizing),
    so the fallback is additive, not a replacement. *)
 VerificationTest[

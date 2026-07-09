@@ -306,8 +306,15 @@
             handle.title = "Drag to resize";
             frame.appendChild(handle);
 
+            // Track the initiating pointer so this drag responds only to it. The move/end
+            // listeners live on window (below), so without this filter a second finger on a
+            // multi-pointer device could resize the frame or end the drag out from under the
+            // pointer that started it. The same guard also blocks a concurrent second drag.
+            var activePointerId = null;
             handle.addEventListener("pointerdown", function(e) {
+                if (activePointerId !== null) return; // a drag is already in progress
                 e.preventDefault();
+                activePointerId = e.pointerId;
                 var startY = e.clientY;
                 var startHeight = frame.getBoundingClientRect().height;
                 // Disabling the iframe's pointer events keeps the cross-origin frame from
@@ -317,9 +324,12 @@
                 try { handle.setPointerCapture(e.pointerId); } catch (err) {}
 
                 function onMove(ev) {
+                    if (ev.pointerId !== activePointerId) return;
                     frame.style.height = Math.max(100, startHeight + ev.clientY - startY) + "px";
                 }
-                function onEnd() {
+                function onEnd(ev) {
+                    if (ev.pointerId !== activePointerId) return;
+                    activePointerId = null;
                     iframe.style.pointerEvents = "";
                     window.removeEventListener("pointermove", onMove);
                     window.removeEventListener("pointerup", onEnd);
